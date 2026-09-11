@@ -1,0 +1,188 @@
+.layout {
+  display: grid;
+  gap: var(--space-5);
+  align-items: start;
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.slip {
+  display: grid;
+  gap: var(--space-2);
+  /* A landing stamp starts larger than the paper; it comes down inside it. */
+  overflow: clip;
+}
+
+.slipHeading {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+/* The one number the tenant came for, set wide. */
+.amount {
+  max-width: none;
+  font-size: var(--text-display);
+  font-weight: 700;
+  font-stretch: var(--width-display);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.due {
+  font-size: var(--text-lg);
+}
+
+.paidHeading {
+  font-size: var(--text-2xl);
+}
+
+/* What the total is made of, printed under it like the lines of a bill. */
+.lines {
+  display: grid;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid color-mix(in srgb, var(--graphite) 22%, transparent);
+}
+
+.lines li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--graphite) 22%, transparent);
+}
+
+/* The tear line below closes the bill; a hairline right above it would stack two rules. */
+.lines li:last-child {
+  border-bottom: 0;
+}
+
+.lineFor {
+  display: grid;
+}
+
+/* A date in the record, so Carbon, like every other date the book writes. */
+.lineDue {
+  font-size: var(--text-sm);
+  color: var(--carbon);
+}
+
+.pay {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px dashed color-mix(in srgb, var(--graphite) 35%, transparent);
+}
+
+.payNote {
+  font-size: var(--text-sm);
+}
+
+.payError {
+  color: var(--crimson);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* Sent but not yet confirmed: said plainly in print, with no stamp until the bank answers. */
+.waiting {
+  font-weight: 600;
+}
+
+/*
+ * The stamp pressed across the end of the amount it settles: its ring overlaps the last digit, and
+ * every figure stays readable. A very long amount on a narrow phone runs it off the paper's edge, as
+ * a stamp would, rather than widening the page.
+ */
+.stamped {
+  position: relative;
+  justify-self: start;
+}
+
+.stampAt {
+  position: absolute;
+  top: 50%;
+  left: calc(100% - 1.25rem);
+  translate: 0 -45%;
+}
+
+.receipt {
+  margin-top: var(--space-3);
+}
+
+.home {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.homeHeading {
+  font-size: var(--text-xl);
+}
+
+.list {
+  display: grid;
+  margin: 0;
+}
+
+.list > div {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.list dt {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.list dd {
+  margin: 0;
+}
+
+.contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-1);
+  font-weight: 600;
+}
+
+.contact a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--tap);
+}
+
+.notice {
+  color: var(--crimson);
+  font-weight: 600;
+}
+
+.none {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 36rem;
+  margin: var(--space-6) auto 0;
+}
+
+.noneHeading {
+  font-size: var(--text-2xl);
+}
+
+@media (min-width: 56rem) {
+  .layout {
+    grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
+    column-gap: var(--space-7);
+  }
+
+  .slip {
+    position: sticky;
+    top: var(--space-5);
+  }
+}

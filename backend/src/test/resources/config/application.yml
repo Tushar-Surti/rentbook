@@ -1,0 +1,7 @@
+# Test-only overrides, layered on top of the main application.yml.
+rentbook:
+  jwt:
+    secret: integration-test-secret-0123456789abcdefghijklmnop
+  auth:
+    # Every test registers from 127.0.0.1; the throttle itself is covered by SignupThrottleFilterTest.
+    signups-per-hour: 100000

@@ -1,0 +1,76 @@
+# Render blueprint: New > Blueprint, pick this repo. Values marked sync: false are asked for on creation.
+databases:
+  - name: rentbook-db
+    databaseName: rentbook
+    user: rentbook
+    region: singapore
+    # Paid on purpose: free Postgres expires after 30 days and has no backups.
+    plan: basic-256mb
+    postgresMajorVersion: "17"
+
+services:
+  - type: web
+    name: rentbook-api
+    runtime: docker
+    region: singapore
+    # Always on: the free tier sleeps after 15 minutes, which stalls webhooks and scheduled reminders.
+    plan: starter
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DB_HOST
+        fromDatabase:
+          name: rentbook-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: rentbook-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: rentbook-db
+          property: database
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: rentbook-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: rentbook-db
+          property: password
+      - key: RENTBOOK_JWT_SECRET
+        generateValue: true
+      - key: RENTBOOK_APP_BASE_URL
+        sync: false
+      - key: RENTBOOK_CORS_ORIGINS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: RENTBOOK_PLATFORM_FEE_BPS
+        value: "200"
+      # Razorpay test-mode keys. Left empty, online payments stay off (see docs/deployment.md).
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      # S3-compatible storage for maintenance photos (Cloudflare R2 recommended; see docs/deployment.md).
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: S3_REGION
+        value: auto
+      # "log" writes reminder texts to the log. Switch to "twilio" once TWILIO_* are set (see docs/deployment.md).
+      - key: RENTBOOK_SMS_PROVIDER
+        value: log

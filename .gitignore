@@ -1,0 +1,24 @@
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Backend
+backend/target/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+
+# Machine-local tool state
+.claude/settings.local.json
+.impeccable/config.local.json
+.impeccable/review/

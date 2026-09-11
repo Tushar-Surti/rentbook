@@ -1,0 +1,76 @@
+.wrap {
+  display: grid;
+  gap: var(--space-6);
+  max-width: 36rem;
+}
+
+.intro {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.heading {
+  font-size: var(--text-3xl);
+}
+
+.lede,
+.note {
+  color: var(--graphite-soft);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-6);
+}
+
+/* Two groups of fields, headed like the parts of a bank form. */
+.group {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  margin-bottom: var(--space-3);
+  padding: 0;
+  font-size: var(--text-lg);
+  font-weight: 650;
+}
+
+.pair {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* The account as the bank would print it: ruled lines under a heavy rule. */
+.account {
+  display: grid;
+  margin: 0;
+  border-top: 2px solid var(--graphite);
+}
+
+.account > div {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.account dt {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.account dd {
+  margin: 0;
+}
+
+@media (min-width: 30rem) {
+  .pair {
+    grid-template-columns: 1fr 10rem;
+  }
+}

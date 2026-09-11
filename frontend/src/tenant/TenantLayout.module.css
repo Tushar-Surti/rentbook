@@ -1,0 +1,115 @@
+.shell {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  min-height: 100dvh;
+}
+
+.latest {
+  max-width: none;
+  padding: 0 var(--space-4);
+  color: var(--carbon);
+  font-weight: 600;
+}
+
+.latest:not(:empty) {
+  padding-bottom: var(--space-3);
+}
+
+@media (min-width: 48rem) {
+  .latest {
+    padding-inline: max(var(--space-6), calc((100% - 64rem) / 2));
+  }
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.home {
+  text-decoration: none;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.name {
+  color: var(--graphite-soft);
+}
+
+/* Index tabs over the tenant's pages, in the same hand as the landlord's book. */
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  margin-bottom: -1px;
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid transparent;
+  border-radius: 4px 4px 0 0;
+  background: var(--rail);
+  color: var(--graphite);
+  font-weight: 600;
+  font-stretch: var(--width-register);
+  text-decoration: none;
+  transition: background-color 150ms var(--ease-out);
+}
+
+.tab:hover {
+  background: color-mix(in srgb, var(--rail) 60%, var(--sheet-original));
+}
+
+.tab[aria-current='page'] {
+  border-color: var(--rule);
+  border-bottom-color: var(--sheet);
+  background: var(--sheet);
+  color: var(--carbon);
+}
+
+.tab:focus-visible {
+  outline-offset: -2px;
+}
+
+.main {
+  padding: var(--space-5) var(--space-3) var(--space-7);
+  overflow-x: clip;
+}
+
+@media (max-width: 29.99rem) {
+  .name {
+    display: none;
+  }
+
+  /* Four tabs fit a 360px phone without scrolling. */
+  .tab {
+    padding-inline: var(--space-3);
+  }
+}
+
+@media (min-width: 48rem) {
+  .topbar {
+    padding: var(--space-4) var(--space-6);
+  }
+
+  /* Tabs start where the page's content column starts. */
+  .tabs {
+    padding-inline: max(var(--space-6), calc((100% - 64rem) / 2));
+  }
+
+  .main {
+    padding: var(--space-6) var(--space-6) var(--space-8);
+  }
+}

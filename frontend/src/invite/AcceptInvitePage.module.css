@@ -1,0 +1,108 @@
+.page {
+  display: grid;
+  gap: var(--space-5);
+  min-height: 100dvh;
+  padding: var(--space-4);
+}
+
+.home {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.main {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+  width: min(100%, 64rem);
+  margin: 0 auto;
+}
+
+.intro {
+  max-width: 40rem;
+}
+
+.heading {
+  font-size: var(--text-2xl);
+}
+
+.terms {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.termsHeading {
+  font-size: var(--text-lg);
+}
+
+.list {
+  display: grid;
+  margin: 0;
+}
+
+.list > div {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--graphite) 22%, transparent);
+}
+
+.list dt {
+  color: var(--graphite);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.list dd {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 550;
+}
+
+.expiry {
+  font-size: var(--text-sm);
+}
+
+.formSheet {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
+.formHeading {
+  font-size: var(--text-xl);
+}
+
+.note {
+  color: var(--graphite-soft);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.unavailable {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  width: min(100%, 36rem);
+  margin: var(--space-6) auto 0;
+}
+
+@media (min-width: 56rem) {
+  .page {
+    padding: var(--space-5) var(--space-6);
+  }
+
+  .main {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    column-gap: var(--space-7);
+  }
+
+  .intro {
+    grid-column: 1 / -1;
+  }
+}

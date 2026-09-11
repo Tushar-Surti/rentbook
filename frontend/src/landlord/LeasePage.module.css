@@ -1,0 +1,77 @@
+.page {
+  display: grid;
+  gap: var(--space-7);
+  max-width: 52rem;
+}
+
+.header {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-3xl);
+}
+
+.where {
+  color: var(--graphite-soft);
+}
+
+.contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  font-weight: 600;
+}
+
+.contact a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--tap);
+}
+
+/* The terms, printed across one ruled line. */
+.terms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.terms > div {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+}
+
+.terms dt {
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.terms dd {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 550;
+}
+
+.section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.sectionHeading {
+  font-size: var(--text-xl);
+}
+
+.note {
+  color: var(--graphite-soft);
+}
+
+.missing {
+  display: grid;
+  gap: var(--space-3);
+}

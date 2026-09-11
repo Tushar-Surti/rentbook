@@ -1,0 +1,106 @@
+.field {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--graphite);
+}
+
+.control {
+  display: flex;
+  align-items: stretch;
+  min-height: var(--tap);
+  background: var(--sheet-original);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-input);
+  transition: border-color 150ms var(--ease-out);
+}
+
+.control:focus-within {
+  border-color: var(--carbon);
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.control[data-invalid] {
+  border-color: var(--crimson);
+}
+
+.prefix {
+  display: grid;
+  place-items: center;
+  padding: 0 var(--space-3);
+  border-right: 1px solid var(--rule);
+  color: var(--graphite-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* width: 100% drops the browser's built-in input width, so fields fit whatever column they are in. */
+.input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 0 var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--carbon);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--graphite-soft);
+}
+
+.textarea {
+  min-height: 6rem;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  color: var(--carbon);
+  line-height: var(--leading-body);
+  font-variant-numeric: normal;
+  resize: vertical;
+}
+
+/* An empty date shows its dd/mm/yyyy mask as a hint, not as an entry. */
+.input[data-empty]::-webkit-datetime-edit {
+  color: var(--graphite-soft);
+}
+
+.select {
+  appearance: none;
+  padding-right: var(--space-6);
+  background-image: linear-gradient(45deg, transparent 50%, var(--graphite-soft) 50%),
+    linear-gradient(135deg, var(--graphite-soft) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 13px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.hint {
+  font-size: var(--text-sm);
+  color: var(--graphite-soft);
+}
+
+.error {
+  font-size: var(--text-sm);
+  font-weight: 550;
+  color: var(--crimson);
+}
+
+.formError {
+  padding: var(--space-3) var(--space-4);
+  background: var(--crimson-wash);
+  color: var(--crimson);
+  font-weight: 550;
+}

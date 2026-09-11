@@ -1,0 +1,240 @@
+/* Empty, the rule still spans the ledger's full measure. */
+.empty {
+  max-width: 52rem;
+  padding: var(--space-4) 0;
+  border-top: 2px solid var(--graphite);
+  color: var(--graphite-soft);
+}
+
+.ledger {
+  width: 100%;
+  max-width: 52rem;
+  font-stretch: var(--width-register);
+}
+
+/* The register's discipline: fixed columns for date, amount and status; the description takes the rest. */
+.colDue {
+  width: 8rem;
+}
+
+.colAmount {
+  width: 9rem;
+}
+
+.colStatus {
+  width: 8rem;
+}
+
+.colAction {
+  width: 9rem;
+}
+
+.ledger th,
+.ledger td {
+  padding: var(--space-3);
+  text-align: left;
+  vertical-align: middle;
+}
+
+/* A spare header cell (a column kept only for alignment) carries the same heavy rule. */
+.ledger thead th,
+.ledger thead td {
+  padding-block: var(--space-2);
+  border-bottom: 2px solid var(--graphite);
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  vertical-align: bottom;
+}
+
+.ledger tbody td {
+  border-bottom: 1px solid var(--rule);
+}
+
+.ledger .amount {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ledger .dueCell {
+  white-space: nowrap;
+}
+
+.ledger .actionCell {
+  text-align: right;
+}
+
+/* A waived line stays in the book, struck through: it happened, it just no longer counts. */
+.waived .amountCell,
+.waived .forCell {
+  color: var(--graphite-soft);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.ledger .rowAction {
+  position: relative;
+  font-size: var(--text-sm);
+}
+
+.ledger .rowAction::after {
+  content: '';
+  position: absolute;
+  inset: -12px -6px;
+}
+
+/* While a waive is being confirmed, the entry and its question read as one line of the book. */
+.ledger tbody tr.confirming td {
+  border-bottom-color: transparent;
+}
+
+.ledger .confirmRow td {
+  padding-top: 0;
+}
+
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.question {
+  font-weight: 600;
+}
+
+/* Focus lands here so the question is read out; it is not a tab stop, so it needs no ring. */
+.question:focus {
+  outline: none;
+}
+
+.rowError {
+  display: block;
+  color: var(--crimson);
+  font-size: var(--text-sm);
+}
+
+.ledger tfoot th,
+.ledger tfoot td {
+  padding-top: var(--space-4);
+  border-top: 3px double var(--graphite);
+  font-weight: 650;
+}
+
+.ledger .total {
+  font-size: var(--text-lg);
+}
+
+.overdueNote {
+  display: block;
+  color: var(--crimson);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+@media (min-width: 64rem) {
+  .ledger tbody td {
+    font-size: var(--text-lg);
+  }
+
+  .ledger .rowAction,
+  .ledger .confirm {
+    font-size: var(--text-sm);
+  }
+}
+
+/* Phones: what the line is for and its amount, then when it is due and its status. */
+@media (max-width: 39.99rem) {
+  .ledger {
+    border-top: 2px solid var(--graphite);
+  }
+
+  /* Rows become grids here; fixed column widths would pin each one inside the first column. */
+  .ledger col {
+    width: auto;
+  }
+
+  .ledger thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .ledger tbody tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'for amount'
+      'due status'
+      'action action';
+    align-items: center;
+    column-gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .ledger tbody td {
+    padding: 0;
+    border: 0;
+  }
+
+  .ledger .forCell {
+    grid-area: for;
+    font-weight: 600;
+  }
+
+  .ledger .amountCell {
+    grid-area: amount;
+  }
+
+  .ledger .dueCell {
+    grid-area: due;
+    font-size: var(--text-sm);
+  }
+
+  .ledger .statusCell {
+    grid-area: status;
+    text-align: right;
+  }
+
+  .ledger .actionCell {
+    grid-area: action;
+    text-align: left;
+  }
+
+  .ledger .actionCell:empty {
+    display: none;
+  }
+
+  .ledger tbody tr.confirming {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .ledger tbody tr.confirmRow {
+    display: block;
+    padding-top: var(--space-2);
+  }
+
+  .ledger .confirmSpacer {
+    display: none;
+  }
+
+  .ledger tfoot tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+
+  .ledger tfoot th,
+  .ledger tfoot td {
+    padding-inline: 0;
+  }
+
+  .ledger tfoot td:empty {
+    display: none;
+  }
+}

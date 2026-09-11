@@ -1,0 +1,74 @@
+/*
+ * Carbon Copy. Labels are printed in Graphite; everything written into the record (amounts, dates,
+ * names) is in Carbon. Stamp Violet appears only where the server has verified something.
+ */
+:root {
+  /* Paper */
+  --sheet: #f3f5f7;
+  --sheet-original: #ffffff;
+  --rail: #e4e8ee;
+  --rule: #c9ced6;
+  --rule-strong: #8a93a0;
+
+  /* Ink */
+  --graphite: #1f2329;
+  --graphite-soft: #4a515c;
+  --carbon: #2a3190;
+  --carbon-press: #1e2470;
+  --carbon-wash: #e2e5f5;
+  --on-carbon: #ffffff;
+
+  /* Marks */
+  --stamp: #6b3a9e;
+  --stamp-wash: #efe7f6;
+  --canary: #f2da55;
+  --canary-edge: #d4b92c;
+  --crimson: #a3203a;
+  --crimson-wash: #f8e3e7;
+
+  /* Type: one family at three widths. 'Anek Rupee' covers only ₹, which Anek Latin lacks. */
+  --font: 'Anek Rupee', 'Anek Latin Variable', system-ui, sans-serif;
+  --width-register: 82%;
+  --width-ui: 100%;
+  --width-display: 118%;
+
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.2rem;
+  --text-xl: 1.44rem;
+  --text-2xl: 1.728rem;
+  --text-3xl: 2.074rem;
+  --text-display: 3rem;
+
+  --leading-tight: 1.15;
+  --leading-body: 1.5;
+
+  /* Space, 4px steps */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* Shape: sheets are square; controls barely rounded */
+  --radius-input: 4px;
+  --radius-button: 6px;
+
+  /* The only shadow in the system, reserved for sheets of paper */
+  --sheet-shadow: 0 1px 1px rgb(31 35 41 / 0.06), 0 8px 20px -10px rgb(31 35 41 / 0.28);
+
+  --focus-ring: 2px solid var(--carbon);
+  --tap: 2.75rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --measure: 68ch;
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --text-display: 3.75rem;
+  }
+}

@@ -1,0 +1,13 @@
+/* What the payment settled, printed small beneath the receipt's number. */
+.items {
+  display: block;
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.error {
+  display: block;
+  color: var(--crimson);
+  font-size: var(--text-sm);
+}

@@ -1,0 +1,116 @@
+.layout {
+  display: grid;
+  gap: var(--space-6);
+  max-width: 64rem;
+}
+
+.intro {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.heading {
+  font-size: var(--text-3xl);
+}
+
+.lede {
+  color: var(--graphite-soft);
+}
+
+/* One receipt-book spread: the original the landlord writes on, torn from the duplicate the tenant keeps. */
+.spread {
+  display: grid;
+  box-shadow: var(--sheet-shadow);
+}
+
+.spread > section {
+  box-shadow: none;
+}
+
+.original,
+.duplicate {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
+/* Stacked on phones: the duplicate's top edge is the tear line under the original. */
+.spread .duplicate {
+  background-image: radial-gradient(circle at 7px 0, var(--sheet-original) 3.5px, transparent 4px);
+}
+
+.partHeading {
+  font-size: var(--text-lg);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.pair {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.list {
+  display: grid;
+  margin: 0;
+}
+
+.list > div {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--graphite) 22%, transparent);
+}
+
+.list dt {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.list dd {
+  margin: 0;
+  min-height: 1.5em;
+  font-size: var(--text-lg);
+  font-weight: 550;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.sent,
+.message {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+  max-width: 40rem;
+}
+
+@media (min-width: 30rem) {
+  .pair {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Side by side: the duplicate is perforated along the edge it was torn from, and along the top. */
+@media (min-width: 60rem) {
+  .spread {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  }
+
+  .spread .duplicate {
+    background-image:
+      radial-gradient(circle at 7px 0, var(--hole, var(--sheet)) 3.5px, transparent 4px),
+      radial-gradient(circle at 0 7px, var(--sheet-original) 3.5px, transparent 4px);
+    background-position: 0 0, 0 0;
+    background-size: 14px 8px, 8px 14px;
+    background-repeat: repeat-x, repeat-y;
+  }
+}

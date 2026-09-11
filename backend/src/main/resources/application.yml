@@ -1,0 +1,151 @@
+spring:
+  application:
+    name: rentbook
+  threads:
+    virtual:
+      enabled: true
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    locations: classpath:db/migration
+  mail:
+    host: localhost
+    port: 1025
+  docker:
+    compose:
+      enabled: false
+
+server:
+  # Render and Railway announce the port in PORT.
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    # Email is best-effort (failures are logged); an SMTP outage must not fail the host's health check.
+    mail:
+      enabled: false
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+rentbook:
+  app-base-url: http://localhost:5173
+  cors:
+    allowed-origins: http://localhost:5173
+  jwt:
+    issuer: rentbook
+    # Opaque string of at least 32 bytes. Production reads RENTBOOK_JWT_SECRET.
+    secret: ${RENTBOOK_JWT_SECRET:}
+    access-token-ttl: 15m
+    refresh-token-ttl: 30d
+  auth:
+    cookie-secure: true
+    # Landlord registrations and invite acceptances per client address per hour.
+    signups-per-hour: 20
+  invites:
+    ttl: 7d
+  mail:
+    from: "Rentbook <no-reply@rentbook.local>"
+  platform-fee-bps: 200
+  sms:
+    # "log" writes texts to the log; "twilio" sends them with the credentials below.
+    provider: ${RENTBOOK_SMS_PROVIDER:log}
+  twilio:
+    account-sid: ${TWILIO_ACCOUNT_SID:}
+    auth-token: ${TWILIO_AUTH_TOKEN:}
+    from: ${TWILIO_FROM:}
+  # Test-mode keys from the Razorpay dashboard. Payments stay off until key id and secret are set.
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:}
+    key-secret: ${RAZORPAY_KEY_SECRET:}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+    base-url: https://api.razorpay.com
+  # S3-compatible storage for maintenance photos and the document vault. Uploads stay off until a
+  # bucket and keys are set. public-endpoint is what browsers use when it differs from endpoint.
+  storage:
+    endpoint: ${S3_ENDPOINT:}
+    public-endpoint: ${S3_PUBLIC_ENDPOINT:}
+    region: ${S3_REGION:auto}
+    bucket: ${S3_BUCKET:}
+    access-key: ${S3_ACCESS_KEY:}
+    secret-key: ${S3_SECRET_KEY:}
+    path-style: ${S3_PATH_STYLE:false}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+    # Local secrets (Razorpay keys) from the repo root's .env, whether the backend runs from backend/ or the root.
+    # Real environment variables still win; production never reads .env.
+    import: optional:file:../.env[.properties],optional:file:.env[.properties]
+  docker:
+    compose:
+      enabled: true
+      file: ../compose.yaml
+      lifecycle-management: start-only
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+rentbook:
+  jwt:
+    secret: dev-only-secret-never-use-outside-local-machines-0123456789
+  auth:
+    cookie-secure: false
+    signups-per-hour: 1000
+  # MinIO from compose.yaml; the bucket is created on startup if it is missing.
+  storage:
+    endpoint: http://localhost:9000
+    region: us-east-1
+    bucket: rentbook-docs
+    access-key: rentbook
+    secret-key: rentbook-secret
+    path-style: true
+    create-bucket: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    # SPRING_DATASOURCE_URL, when set (e.g. on Railway), takes precedence over these parts.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:rentbook}
+  mail:
+    host: smtp.sendgrid.net
+    port: 587
+    username: apikey
+    password: ${SENDGRID_API_KEY:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+rentbook:
+  app-base-url: ${RENTBOOK_APP_BASE_URL}
+  cors:
+    allowed-origins: ${RENTBOOK_CORS_ORIGINS}
+  mail:
+    from: ${MAIL_FROM}
+  platform-fee-bps: ${RENTBOOK_PLATFORM_FEE_BPS:200}

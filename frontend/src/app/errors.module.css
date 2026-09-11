@@ -1,0 +1,21 @@
+.page {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+.home {
+  margin-bottom: var(--space-6);
+  text-decoration: none;
+}
+
+.heading {
+  font-size: var(--text-2xl);
+}
+
+.body {
+  color: var(--graphite-soft);
+}

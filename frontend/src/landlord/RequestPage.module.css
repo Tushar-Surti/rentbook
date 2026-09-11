@@ -1,0 +1,10 @@
+.page {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 52rem;
+}
+
+.back {
+  justify-self: start;
+  font-weight: 600;
+}

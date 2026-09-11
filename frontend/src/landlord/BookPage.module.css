@@ -1,0 +1,307 @@
+/* One measure for every block on the page, so the register and the form share a right edge. */
+.book {
+  display: grid;
+  gap: var(--space-7);
+  max-width: 52rem;
+}
+
+.header {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-3xl);
+}
+
+.address {
+  color: var(--graphite-soft);
+}
+
+/* In the first view whenever something is open: a link down to "Needs you". */
+.needsNote {
+  font-weight: 600;
+}
+
+.needs {
+  scroll-margin-top: var(--space-5);
+}
+
+.sectionHeading {
+  font-size: var(--text-xl);
+}
+
+.issued {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+  padding: var(--space-5);
+  background: var(--sheet);
+}
+
+.empty {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 52rem;
+  padding: var(--space-5) 0;
+  border-top: 2px solid var(--graphite);
+  border-bottom: 1px solid var(--rule);
+  color: var(--graphite-soft);
+}
+
+/* The register: ruled like a ledger, a heavy rule under the headings and a double rule over the total. */
+.register {
+  width: 100%;
+  max-width: 52rem;
+  font-stretch: var(--width-register);
+}
+
+.colUnit {
+  width: 7rem;
+}
+
+.colRent {
+  width: 9rem;
+}
+
+.colDue {
+  width: 8rem;
+}
+
+.colAction {
+  width: 10rem;
+}
+
+.register th,
+.register td {
+  padding: var(--space-3);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.register thead th {
+  padding-block: var(--space-2);
+  border-bottom: 2px solid var(--graphite);
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  vertical-align: bottom;
+}
+
+.register tbody td {
+  border-bottom: 1px solid var(--rule);
+}
+
+.register .roomRow th {
+  padding-top: var(--space-5);
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--text-md);
+  font-weight: 650;
+}
+
+.roomCount {
+  margin-left: var(--space-3);
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.register .unitCell {
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.register .room .unitCell {
+  padding-left: var(--space-5);
+}
+
+.register .amount {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.asking {
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+}
+
+.register .actionCell {
+  text-align: right;
+}
+
+/* Row actions stay small so every ruled row keeps one pitch; the invisible hit area still reaches 44px. */
+.register .rowAction {
+  position: relative;
+  font-size: var(--text-sm);
+}
+
+.register .rowAction::after {
+  content: '';
+  position: absolute;
+  inset: -12px -6px;
+}
+
+.inviteActions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  column-gap: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.rowError {
+  display: block;
+  color: var(--crimson);
+  font-size: var(--text-sm);
+}
+
+.register tfoot th,
+.register tfoot td {
+  padding-top: var(--space-4);
+  border-top: 3px double var(--graphite);
+  font-weight: 650;
+}
+
+.register .total {
+  font-size: var(--text-lg);
+}
+
+.tally {
+  display: block;
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.perMonth {
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.add,
+.needs {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.missing {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* Wide screens: the condensed register reads a step larger, so it stays dense rather than small. */
+@media (min-width: 64rem) {
+  .register tbody td,
+  .register tfoot th,
+  .register .total {
+    font-size: var(--text-lg);
+  }
+
+  .register .asking,
+  .register .rowAction,
+  .register .inviteActions,
+  .register .tally,
+  .register .perMonth {
+    font-size: var(--text-sm);
+  }
+}
+
+/* Phones: each row becomes two short lines, with its one action beside the status. */
+@media (max-width: 39.99rem) {
+  .register {
+    border-top: 2px solid var(--graphite);
+  }
+
+  /* Rows become grids here; fixed column widths would pin each one inside the first column. */
+  .register col {
+    width: auto;
+  }
+
+  .register thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .register tbody tr:not(.roomRow) {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'unit rent'
+      'tenant due'
+      'action action';
+    align-items: center;
+    column-gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .register tbody td {
+    padding: 0;
+    border: 0;
+  }
+
+  .register .unitCell {
+    grid-area: unit;
+  }
+
+  .register .rentCell {
+    grid-area: rent;
+  }
+
+  .register .tenantCell {
+    grid-area: tenant;
+  }
+
+  .register .dueCell {
+    grid-area: due;
+    text-align: right;
+  }
+
+  .register .actionCell {
+    grid-area: action;
+    text-align: left;
+  }
+
+  .register .dueCell:empty,
+  .register .actionCell:empty {
+    display: none;
+  }
+
+  /* A vacant unit has no due date, so its invite link takes that place. */
+  .register tr:has(.dueCell:empty) .actionCell {
+    grid-area: due;
+    text-align: right;
+  }
+
+  .inviteActions {
+    justify-content: flex-start;
+  }
+
+  .register .room .unitCell {
+    padding-left: 0;
+  }
+
+  .register .roomRow th {
+    display: block;
+    padding-inline: 0;
+  }
+
+  .register tfoot tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+
+  .register tfoot th,
+  .register tfoot td {
+    padding-inline: 0;
+  }
+
+  .register tfoot td:empty {
+    display: none;
+  }
+}

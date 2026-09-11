@@ -1,0 +1,29 @@
+.loading {
+  display: grid;
+  place-items: start center;
+  min-height: 60dvh;
+  padding: var(--space-7) var(--space-4);
+}
+
+/* A blank sheet waiting to be written on; still, so nothing moves before there is something to show. */
+.blank {
+  display: grid;
+  gap: var(--space-4);
+  width: min(100%, 30rem);
+  padding: var(--space-6) var(--space-5);
+  background: var(--sheet-original);
+  box-shadow: var(--sheet-shadow);
+}
+
+.blank span {
+  height: 0.75rem;
+  background: var(--rail);
+}
+
+.blank span:nth-child(2) {
+  width: 70%;
+}
+
+.blank span:nth-child(3) {
+  width: 45%;
+}

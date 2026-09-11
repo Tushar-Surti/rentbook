@@ -1,0 +1,52 @@
+.mark {
+  display: inline-block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.occupied {
+  color: var(--graphite);
+}
+
+.vacant {
+  color: var(--graphite-soft);
+}
+
+.invited {
+  color: var(--carbon);
+}
+
+/* Not due yet: said quietly, so canary keeps meaning "now". */
+.notice,
+.inactive,
+.waived,
+.upcoming {
+  color: var(--graphite-soft);
+}
+
+.due {
+  padding: 0 var(--space-2);
+  background: var(--canary);
+  color: var(--graphite);
+}
+
+.overdue {
+  padding: 0 var(--space-2);
+  background: var(--crimson-wash);
+  color: var(--crimson);
+}
+
+/*
+ * A request still needing someone is printed; a finished one goes quiet. Urgent is printed too:
+ * Crimson means late or wrong, and "urgent first" ordering already carries the priority.
+ */
+.working,
+.urgent {
+  color: var(--graphite);
+}
+
+.done {
+  color: var(--graphite-soft);
+}

@@ -1,0 +1,70 @@
+/* The rubber stamp: violet stamp-pad ink in a double ring, set down slightly crooked. */
+.stamp {
+  display: inline-block;
+  border: 3px double var(--stamp);
+  border-radius: 3px;
+  color: var(--stamp);
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+  transform: rotate(var(--tilt));
+}
+
+/* Beside an entry in the register and the ledger. */
+.mark {
+  --tilt: -3deg;
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+/* Pressed across the amount on the tenant's slip; the digits show through the ink. */
+.slip {
+  --tilt: -8deg;
+  padding: 0.05em 0.4em 0.1em;
+  border-width: 4px;
+  font-size: var(--text-2xl);
+  font-stretch: var(--width-display);
+  line-height: 1.1;
+  mix-blend-mode: multiply;
+}
+
+@media (min-width: 48rem) {
+  .slip {
+    font-size: var(--text-3xl);
+  }
+}
+
+/*
+ * The one authored motion: the stamp comes down from above the page, gives a little on contact, and
+ * stays. It plays only when Razorpay's confirmation arrives while the page is open.
+ */
+.landing {
+  animation: land 520ms var(--ease-out) both;
+}
+
+@keyframes land {
+  0% {
+    opacity: 0;
+    transform: rotate(calc(var(--tilt) - 9deg)) scale(1.9);
+  }
+
+  55% {
+    opacity: 1;
+    transform: rotate(calc(var(--tilt) + 1deg)) scale(0.94);
+  }
+
+  80% {
+    transform: rotate(var(--tilt)) scale(1.02);
+  }
+
+  100% {
+    opacity: 1;
+    transform: rotate(var(--tilt)) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing {
+    animation: none;
+  }
+}

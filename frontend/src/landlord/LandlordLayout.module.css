@@ -1,0 +1,183 @@
+.shell {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  min-height: 100dvh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.home {
+  text-decoration: none;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.name {
+  color: var(--graphite-soft);
+}
+
+.topLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--tap);
+  color: var(--carbon);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.topLink:hover,
+.topLink[aria-current='page'] {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.3em;
+}
+
+/* On wide screens "Add property" lives up here, so the tabs hold only properties. */
+.addTop {
+  display: none;
+}
+
+@media (max-width: 29.99rem) {
+  .name {
+    display: none;
+  }
+}
+
+.latest {
+  max-width: none;
+  padding: 0 var(--space-4);
+  color: var(--carbon);
+  font-weight: 600;
+}
+
+.latest:not(:empty) {
+  padding-bottom: var(--space-3);
+}
+
+.body {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+/* Index tabs: on phones a strip along the top of the page. */
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: 0 var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  max-width: 16rem;
+  padding: var(--space-2) var(--space-4);
+  border-radius: 4px 4px 0 0;
+  background: var(--rail);
+  color: var(--graphite);
+  font-weight: 600;
+  font-stretch: var(--width-register);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 150ms var(--ease-out);
+}
+
+.tab:hover {
+  background: color-mix(in srgb, var(--rail) 60%, var(--sheet-original));
+}
+
+.tab[aria-current='page'] {
+  background: var(--sheet-original);
+  color: var(--carbon);
+}
+
+.tab:focus-visible {
+  outline-offset: -2px;
+}
+
+.addTab {
+  background: transparent;
+  color: var(--carbon);
+}
+
+.page {
+  --hole: var(--sheet-original);
+  min-width: 0;
+  /* A stamp coming down on a row must not widen the page while it lands. */
+  overflow-x: clip;
+  padding: var(--space-5) var(--space-4) var(--space-7);
+  background: var(--sheet-original);
+}
+
+/* Wide screens: tabs sized to their names, stepped down the left edge of the page and cut into it. */
+@media (min-width: 64rem) {
+  .topbar {
+    padding: var(--space-4) var(--space-6);
+  }
+
+  .addTop {
+    display: inline-flex;
+  }
+
+  .addTab {
+    display: none;
+  }
+
+  .latest {
+    padding-inline: var(--space-6);
+  }
+
+  .body {
+    grid-template-rows: none;
+    grid-template-columns: max-content minmax(0, 1fr);
+  }
+
+  .tabs {
+    position: sticky;
+    top: var(--space-5);
+    z-index: 1;
+    flex-direction: column;
+    align-items: flex-end;
+    align-self: start;
+    gap: var(--space-2);
+    padding: var(--space-7) 0 0 var(--space-6);
+    overflow: visible;
+  }
+
+  .tab {
+    max-width: 13rem;
+    margin-right: -1px;
+    border: 1px solid var(--rule);
+    border-right: 0;
+    border-radius: 4px 0 0 4px;
+  }
+
+  /* The open tab is the page's own paper, so it hides the page edge where they meet. */
+  .tab[aria-current='page'] {
+    position: relative;
+    padding-right: calc(var(--space-4) + 1px);
+  }
+
+  .page {
+    border-left: 1px solid var(--rule);
+    padding: var(--space-6) var(--space-7) var(--space-8);
+  }
+}

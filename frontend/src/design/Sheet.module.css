@@ -1,0 +1,27 @@
+.sheet {
+  position: relative;
+  padding: var(--space-6) var(--space-5) var(--space-5);
+  box-shadow: var(--sheet-shadow);
+}
+
+.original {
+  background-color: var(--sheet-original);
+}
+
+.duplicate {
+  background-color: var(--canary);
+}
+
+/* Half-punched holes along the top edge, in the colour of whatever the sheet lies on (--hole). */
+.perforated {
+  background-image: radial-gradient(circle at 7px 0, var(--hole, var(--sheet)) 3.5px, transparent 4px);
+  background-position: 0 0;
+  background-size: 14px 8px;
+  background-repeat: repeat-x;
+}
+
+@media (min-width: 48rem) {
+  .sheet {
+    padding: var(--space-7) var(--space-6) var(--space-6);
+  }
+}
