@@ -58,6 +58,22 @@
   font-size: var(--text-sm);
 }
 
+/* A link-weight action that changes the screen rather than going somewhere. */
+.inlineAction {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--carbon);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.inlineAction:focus-visible {
+  outline: 2px solid var(--carbon);
+  outline-offset: 2px;
+}
+
 @media (min-width: 48rem) {
   .page {
     padding: var(--space-5) var(--space-6);

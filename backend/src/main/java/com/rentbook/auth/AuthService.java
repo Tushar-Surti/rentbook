@@ -21,23 +21,38 @@ public class AuthService {
     private final Sessions sessions;
     private final LoginThrottle throttle;
     private final RentbookProperties properties;
+    private final EmailCodes emailCodes;
 
     AuthService(UserRepository users, LandlordProfileRepository landlordProfiles, PasswordEncoder passwordEncoder,
-                Sessions sessions, LoginThrottle throttle, RentbookProperties properties) {
+                Sessions sessions, LoginThrottle throttle, RentbookProperties properties, EmailCodes emailCodes) {
         this.users = users;
         this.landlordProfiles = landlordProfiles;
         this.passwordEncoder = passwordEncoder;
         this.sessions = sessions;
         this.throttle = throttle;
         this.properties = properties;
+        this.emailCodes = emailCodes;
     }
 
-    @Transactional
-    Sessions.Session registerLandlord(String fullName, String email, String phone, String password) {
-        String normalized = User.normalizeEmail(email);
-        if (users.existsByEmail(normalized)) {
+    private void requireUnused(String normalizedEmail) {
+        if (users.existsByEmail(normalizedEmail)) {
             throw ApiException.conflict("email_taken", "An account with this email already exists. Sign in instead.");
         }
+    }
+
+    /** The first step of registration: prove the inbox before the account exists. */
+    void sendSignupCode(String email) {
+        String normalized = User.normalizeEmail(email);
+        requireUnused(normalized);
+        emailCodes.send(normalized);
+    }
+
+    /** Doesn't roll back on {@link ApiException}, so a wrong code still counts as a try. */
+    @Transactional(noRollbackFor = ApiException.class)
+    Sessions.Session registerLandlord(String fullName, String email, String phone, String password, String code) {
+        String normalized = User.normalizeEmail(email);
+        requireUnused(normalized);
+        emailCodes.consume(normalized, code);
         User landlord = users.save(new User(Role.LANDLORD, fullName, normalized, phone, passwordEncoder.encode(password)));
         landlordProfiles.save(new LandlordProfile(landlord, fullName, properties.platformFeeBps()));
         return sessions.start(landlord);

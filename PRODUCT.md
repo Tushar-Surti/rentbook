@@ -14,7 +14,7 @@ Pinned by the user, with one confirmed change:
 - Real-time: Spring WebSocket with STOMP.
 - Payments: Razorpay Route, test mode only.
 - File storage: S3-compatible (delegated choice between S3 and Cloudinary): MinIO locally, Cloudflare R2 or AWS S3 in production.
-- Notifications: SendGrid email, Twilio SMS.
+- Notifications: email over SMTP (Brevo), Twilio SMS.
 - Local dev on Docker Compose. Deployment on Render (backend and Postgres) and Vercel (frontend).
 
 ## Users

@@ -19,6 +19,8 @@ import java.util.regex.Pattern;
 /**
  * Accounts are created in two places: landlord registration and accepting an invite. Each client address
  * may do that only so many times an hour, so neither endpoint can be used to mass-create accounts.
+ * Registration is counted where it starts, at the emailed code: an account needs a code, and counting
+ * there also stops the endpoint being used to flood someone's inbox.
  * Counts live in memory, which is enough for one instance; several instances would share a store.
  */
 @Component
@@ -44,7 +46,7 @@ class SignupThrottleFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
         return !"POST".equals(request.getMethod())
-                || !(path.equals("/api/v1/auth/register") || ACCEPT.matcher(path).matches());
+                || !(path.equals("/api/v1/auth/register/code") || ACCEPT.matcher(path).matches());
     }
 
     @Override

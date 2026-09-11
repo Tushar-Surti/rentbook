@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.time.LocalDate;
 import java.util.UUID;
+import java.util.function.UnaryOperator;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -23,9 +24,12 @@ public final class Flows {
     public static final String PASSWORD = "correct horse battery";
 
     private final MockMvc mvc;
+    private final UnaryOperator<String> inbox;
 
-    Flows(MockMvc mvc) {
+    /** {@code inbox} returns the newest signup code emailed to an address. */
+    Flows(MockMvc mvc, UnaryOperator<String> inbox) {
         this.mvc = mvc;
+        this.inbox = inbox;
     }
 
     public record Session(String accessToken, String refreshToken, String userId) {
@@ -43,10 +47,22 @@ public final class Flows {
         return LocalDate.now(IndiaTime.ZONE).plusDays(20);
     }
 
+    public ResultActions sendCode(String email) throws Exception {
+        return mvc.perform(post("/api/v1/auth/register/code").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\"}"));
+    }
+
+    /** Asks for a code and reads it out of the email, the way a landlord would. */
+    public String emailedCode(String email) throws Exception {
+        sendCode(email).andExpect(status().isNoContent());
+        return inbox.apply(email);
+    }
+
     public Session registerLandlord(String email) throws Exception {
+        String code = emailedCode(email);
         MvcResult result = mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-                        {"fullName":"Lata Iyer","email":"%s","phone":"+919876543210","password":"%s"}
-                        """.formatted(email, PASSWORD)))
+                        {"fullName":"Lata Iyer","email":"%s","phone":"+919876543210","password":"%s","code":"%s"}
+                        """.formatted(email, PASSWORD, code)))
                 .andExpect(status().isCreated())
                 .andReturn();
         return session(result);

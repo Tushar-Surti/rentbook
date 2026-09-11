@@ -4,12 +4,13 @@ import type { Me, SessionResponse } from '../api/types'
 
 type AuthState = { status: 'loading' } | { status: 'signed-out' } | { status: 'signed-in'; user: Me }
 
-type RegisterInput = { fullName: string; email: string; phone?: string; password: string }
+type RegisterInput = { fullName: string; email: string; phone?: string; password: string; code: string }
 type AcceptInput = { fullName?: string; phone?: string; password: string }
 
 type AuthContextValue = {
   state: AuthState
   login: (email: string, password: string) => Promise<unknown>
+  sendSignupCode: (email: string) => Promise<unknown>
   register: (input: RegisterInput) => Promise<unknown>
   acceptInvite: (token: string, input: AcceptInput) => Promise<unknown>
   logout: () => Promise<unknown>
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       state,
       login: (email, password) =>
         api<SessionResponse>('/auth/login', { method: 'POST', json: { email, password } }).then(setSession),
+      sendSignupCode: (email) => api<void>('/auth/register/code', { method: 'POST', json: { email } }),
       register: (input) =>
         api<SessionResponse>('/auth/register', { method: 'POST', json: input }).then(setSession),
       acceptInvite: (token, input) =>

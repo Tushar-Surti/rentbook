@@ -117,6 +117,13 @@ test('a landlord invites a tenant to a PG bed, the tenant moves in, and both rea
   await page.getByLabel('Email').fill(landlordEmail)
   await page.getByLabel('Password').fill(PASSWORD)
   await capture(page, testInfo, 'register')
+  await page.getByRole('button', { name: 'Email me a code' }).click()
+
+  // The dev profile's signup code is always 000000; a real one arrives by email.
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
+  await capture(page, testInfo, 'register-code')
+  await expectAccessible(page)
+  await page.getByLabel('Code').fill('000000')
   await page.getByRole('button', { name: 'Create account' }).click()
 
   await expect(page.getByRole('heading', { name: 'Add your first property' })).toBeVisible()

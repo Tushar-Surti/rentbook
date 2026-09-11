@@ -3,7 +3,7 @@
 A shared rent book for landlords and tenants in India, covering whole flats and single beds in PG rooms. Both sides read the same records: the lease, the rent ledger and the maintenance thread are one set of rows, updated live for both people.
 
 **Built so far:**
-- Landlord registration and JWT security with two roles, LANDLORD and TENANT.
+- Landlord registration, with a code emailed to prove the address, and JWT security with two roles, LANDLORD and TENANT.
 - Properties with flats, rooms and beds.
 - Invite-only tenant onboarding.
 - A role dashboard for each side, with live move-in notices over STOMP.
@@ -89,7 +89,7 @@ Without Docker, point the backend at any Postgres 17:
   --spring.datasource.username=rentbook --spring.datasource.password=rentbook"
 ```
 
-Emails then fail to send (there is no Mailpit), which the backend logs. The invite page still shows the link to copy.
+Emails then fail to send (there is no Mailpit), which the backend logs. The invite page still shows the link to copy, and signing up still works: the dev profile's signup code is always `000000`.
 
 Photo uploads also need S3-compatible storage. Without Docker, run the MinIO binary:
 

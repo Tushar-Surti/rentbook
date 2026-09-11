@@ -32,7 +32,7 @@ Spring Boot 4.1 (Spring Framework 7, Spring Security 7, Hibernate 7, Jackson 3) 
 | `payment` | Razorpay Route onboarding, checkout, client callback, webhook and its idempotency log, receipts (per-landlord serials, PDF rendering) |
 | `maintenance` | tickets and their append-only event thread |
 | `document` | vault metadata, S3 presigned upload and download |
-| `notification` | email (SMTP or SendGrid) and SMS (log or Twilio) adapters, delivery log |
+| `notification` | email (SMTP: Mailpit or Brevo) and SMS (log or Twilio) adapters, delivery log |
 | `realtime` | STOMP authentication, subscription authorization, live event publishing |
 
 Conventions:
@@ -97,7 +97,7 @@ Base path `/api/v1`. Errors are `application/problem+json`. Lists are paged (`pa
 
 | Area | Endpoints | Access |
 |---|---|---|
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /me` | register is for landlords only |
+| Auth | `POST /auth/register/code`, `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /me` | register is for landlords only, with the code emailed by register/code |
 | Invites by token | `GET /invites/{token}`, `POST /invites/{token}/accept` | public, token-gated; accepting creates the TENANT user and the lease |
 | Invites | `POST /units/{id}/invites`, `GET /invites`, `POST /invites/{id}/resend`, `POST /invites/{id}/revoke` | landlord |
 | Portfolio | `GET, POST /properties`, `GET, PATCH /properties/{id}`, `GET, POST /properties/{id}/units`, `PATCH /units/{id}` | landlord |
@@ -129,6 +129,7 @@ STOMP over a native WebSocket at `/ws` (no SockJS). The client sends `Authorizat
 - Tenant accounts exist only through invite acceptance, and the role comes from the invite, never from the request body. Invite tokens are 32 random bytes, stored hashed, single use, and expire after 7 days.
 - Authorization: public endpoints are listed explicitly; role checks use `@PreAuthorize`; ownership is enforced inside queries through `AccessPolicy`.
 - WebSocket: CONNECT is authenticated with the same JWT decoder, and every SUBSCRIBE is checked against lease or ticket membership.
+- A landlord account needs a 6-digit code emailed to its address first (`POST /auth/register/code`), so every landlord owns the inbox their invites and receipts go to. One code per address, stored as an HMAC keyed with the JWT secret; it lasts 10 minutes, allows five wrong tries, can be re-sent once a minute, and is used up by the account it creates. The dev profile fixes the code at `000000` for the e2e journey; the prod profile refuses to start with a fixed code.
 - Passwords use the delegating encoder (bcrypt). Login attempts are throttled per IP address and email.
 
 ## Ledger and reminders
@@ -203,7 +204,7 @@ STOMP over a native WebSocket at `/ws` (no SockJS). The client sends `Authorizat
 
 ## Operational safeguards
 
-- **Account creation is throttled per client address:** 20 an hour by default (`rentbook.auth.signups-per-hour`). That covers landlord registration and invite acceptance, on top of the login throttle. Counts are kept in memory, which suits the single instance the blueprint runs; more instances would need a shared store.
+- **Account creation is throttled per client address:** 20 an hour by default (`rentbook.auth.signups-per-hour`). That covers signup codes (every landlord registration starts with one, and counting them also stops the endpoint flooding someone's inbox) and invite acceptance, on top of the login throttle. Counts are kept in memory, which suits the single instance the blueprint runs; more instances would need a shared store.
 - **Nightly jobs** (India time):
   - 03:45: uploads that were never confirmed within a day are removed from the database and from storage;
   - 04:15: expired refresh tokens are deleted.
@@ -226,4 +227,4 @@ STOMP over a native WebSocket at `/ws` (no SockJS). The client sends `Authorizat
   3. `POST /documents/{id}/complete` checks the object with a HEAD request before the document becomes AVAILABLE.
 - **Downloads:** 5-minute presigned GET URLs, issued only after the visibility check. A thread's photos come with their links; other files come through `GET /documents/{id}/download`.
 - **Storage keys:** `leases/{lease}/{document}.{ext}`. The uploader's filename is kept in the row for downloads and never goes into the key.
-- Email goes through SMTP (Mailpit locally) or SendGrid; SMS through a logging adapter locally or Twilio. Rent reminders go out three days before, on, and three days after the due day, deduplicated by `notifications.dedupe_key`.
+- Email goes through SMTP: Mailpit locally, Brevo (or any relay) in production; SMS through a logging adapter locally or Twilio. Rent reminders go out three days before, on, and three days after the due day, deduplicated by `notifications.dedupe_key`.

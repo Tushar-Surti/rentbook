@@ -23,7 +23,8 @@ public record RentbookProperties(
     public record Jwt(String issuer, String secret, Duration accessTokenTtl, Duration refreshTokenTtl) {
     }
 
-    public record Auth(boolean cookieSecure) {
+    /** {@code fixedEmailCode} replaces the random signup code on a developer's machine; never set in production. */
+    public record Auth(boolean cookieSecure, String fixedEmailCode) {
     }
 
     public record Invites(Duration ttl) {

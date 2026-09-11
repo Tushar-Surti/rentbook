@@ -1,10 +1,10 @@
 # Deploying Rentbook
 
-The backend and its Postgres database run on Render. The frontend runs on Vercel, which forwards `/api/*` to Render so the refresh cookie stays first-party. The browser opens the live-update WebSocket to Render directly, because Vercel cannot proxy WebSockets.
+The backend runs on Render and its Postgres database on Neon. The frontend runs on Vercel, which forwards `/api/*` to Render so the refresh cookie stays first-party. The browser opens the live-update WebSocket to Render directly, because Vercel cannot proxy WebSockets. Every piece fits in a free plan.
 
 ```
 browser ──https──> Vercel (static React app)
-   │                  └── /api/*  ──rewrite──> Render: rentbook-api (Spring Boot) ──> Render Postgres
+   │                  └── /api/*  ──rewrite──> Render: rentbook-api (Spring Boot) ──> Neon Postgres
    └────── wss ──────────────────────────────> Render: rentbook-api /ws
 Razorpay webhooks ────────────────────────────> Render: rentbook-api /api/v1/webhooks/razorpay
 ```
@@ -12,29 +12,31 @@ Razorpay webhooks ────────────────────�
 ## What you need
 
 - A GitHub repository with this code.
-- Accounts on Render and Vercel.
-- An email sender. SendGrid works through the SMTP relay the prod profile already uses; check SendGrid's current trial or plan terms when you sign up. Any SMTP provider works if you change `spring.mail.*`.
+- Accounts on Render, Vercel and Neon.
+- An email sender. The prod profile uses Brevo's SMTP relay (free for 300 emails a day): in Brevo, open **SMTP & API**, create an SMTP key, and note the login (`…@smtp-brevo.com`). The sender address must be one Brevo has verified, such as the email you signed up with. Any other relay works by setting `SMTP_HOST` and `SMTP_PORT` too.
 - For online rent: a Razorpay account in test mode with Route enabled.
 - For maintenance photos: a private Cloudflare R2 bucket (free egress) or an AWS S3 bucket, with an access key.
 - Optional: Twilio for SMS reminders and urgent-request texts.
 
-## 1. Backend and database on Render
+## 1. Database on Neon
 
-1. In Render, choose **New > Blueprint** and pick the repository. Render reads `render.yaml` and proposes:
-   - `rentbook-db`: Postgres 17 in Singapore, the region closest to India. The blueprint asks for a paid plan (`basic-256mb`) on purpose: a free Postgres expires after 30 days, caps at 1 GB and has no backups. If Render rejects the plan name, pick the smallest paid Postgres plan in the dashboard.
-   - `rentbook-api`: a Docker web service built from `backend/Dockerfile`, on the always-on `starter` plan. Free instances sleep after 15 minutes without traffic, which would stall payment webhooks and scheduled rent reminders.
+1. In Neon, create a project in **AWS Asia Pacific (Singapore)**, the region closest to India and to Render's Singapore services. Neon's free plan keeps the database (0.5 GB) without expiring; it pauses when idle and wakes on the next connection.
+2. Copy the connection string, then turn it into a JDBC URL for the **direct** host: drop `-pooler` from the host name, and keep `sslmode=require`. For example, `postgresql://user:pass@ep-x-pooler.….neon.tech/db?sslmode=require` becomes `jdbc:postgresql://ep-x.….neon.tech/db?sslmode=require`, with the user and password set separately. Flyway takes a session lock while it migrates, which Neon's pooler doesn't hold.
+
+## 2. Backend on Render
+
+1. In Render, choose **New > Blueprint** and pick the repository. Render reads `render.yaml` and proposes `rentbook-api`: a Docker web service built from `backend/Dockerfile`, in Singapore, on the free plan. A free instance sleeps after 15 minutes without traffic. The first request after that takes about a minute; Razorpay retries webhooks, so none are lost, but the nightly and reminder jobs only run while it's awake. Switch the plan to `starter` to keep it always on.
 2. Render asks for the values marked `sync: false`. For the first deploy:
-   - `RENTBOOK_APP_BASE_URL`: your Vercel URL, for example `https://rentbook.vercel.app`. Invite links point here. You can fill it in after step 2 and redeploy.
+   - `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`: the Neon JDBC URL, user and password from section 1.
+   - `RENTBOOK_APP_BASE_URL`: your Vercel URL, for example `https://rentbook.vercel.app`. Invite links point here. You can fill it in after section 3 and redeploy.
    - `RENTBOOK_CORS_ORIGINS`: the same Vercel URL. Comma-separate several (a custom domain, preview URLs).
-   - `MAIL_FROM`: a verified sender, for example `Rentbook <rent@yourdomain.in>`.
-   - `SENDGRID_API_KEY`: the SendGrid API key.
-   - `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`: from the Razorpay test dashboard (section 4). Leave them empty to keep online payments off; tenants then see that they should pay the way they do now.
+   - `SMTP_USERNAME`, `SMTP_PASSWORD`: the Brevo SMTP login and SMTP key.
+   - `MAIL_FROM`: the verified sender, for example `Rentbook <you@gmail.com>`.
+   - `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`: from the Razorpay test dashboard (section 5). Leave them empty to keep online payments off; tenants then see that they should pay the way they do now.
 3. Render generates `RENTBOOK_JWT_SECRET` itself. To set it by hand, use at least 32 random characters, for example the output of `openssl rand -base64 48`.
-4. Deploy. On boot, Flyway creates the schema. The service is healthy when `https://<your-service>.onrender.com/actuator/health` answers `{"status":"UP"}`.
+4. Deploy. On boot, Flyway creates the schema in Neon. The service is healthy when `https://<your-service>.onrender.com/actuator/health` answers `{"status":"UP"}`.
 
-The database connection is assembled from `DB_HOST`, `DB_PORT` and `DB_NAME`, which the blueprint wires from the database. On any other host, set `SPRING_DATASOURCE_URL` (a `jdbc:postgresql://…` URL), `SPRING_DATASOURCE_USERNAME` and `SPRING_DATASOURCE_PASSWORD` instead.
-
-## 2. Frontend on Vercel
+## 3. Frontend on Vercel
 
 1. Edit `frontend/vercel.json` so the `/api/:path*` rewrite points at your Render service, if it is not named `rentbook-api`.
 2. In Vercel, choose **Add New > Project**, import the repository and set:
@@ -43,9 +45,9 @@ The database connection is assembled from `DB_HOST`, `DB_PORT` and `DB_NAME`, wh
    - Environment variable `VITE_WS_URL` = `wss://<your-service>.onrender.com/ws`
 3. Deploy, then copy the production URL into Render's `RENTBOOK_APP_BASE_URL` and `RENTBOOK_CORS_ORIGINS` and redeploy the backend.
 
-## 3. Check it end to end
+## 4. Check it end to end
 
-1. Open the Vercel URL and create a landlord account.
+1. Open the Vercel URL and create a landlord account. A 6-digit code arrives from `MAIL_FROM`; enter it to finish. If it doesn't come, check spam, then the Brevo transactional log.
 2. Add a property, then a room with two beds.
 3. Invite a tenant to Bed A using an email address you can read. The email arrives from `MAIL_FROM`; the invite page also shows the link with Copy and WhatsApp buttons.
 4. Open the link in a private window and accept. The tenant lands on their rent slip.
@@ -58,7 +60,7 @@ The database connection is assembled from `DB_HOST`, `DB_PORT` and `DB_NAME`, wh
 11. On the tenant's lease page, file the lease agreement under **Documents**. The tenant's **Documents** tab shows it straight away. File an ID document as the tenant and download the agreement from either side.
 12. Open the browser console on any page. `vercel.json` sends the Content-Security-Policy as `Content-Security-Policy-Report-Only`, so violations are reported there without blocking anything. Once a test payment, a photo upload and a document download show no violations, rename the header to `Content-Security-Policy` and redeploy. If your API isn't on `onrender.com`, or storage isn't R2, adjust `connect-src` and `img-src` to match first.
 
-## 4. More environment: payments, photos and SMS
+## 5. More environment: payments, photos and SMS
 
 | Feature | Variables | Also |
 |---|---|---|
@@ -81,11 +83,13 @@ With `app.yourdomain.in` on Vercel and `api.yourdomain.in` on Render, both are o
 - **You are signed out on every reload:** the refresh cookie is not reaching the API. Requests must go through the `/api` rewrite on the Vercel domain, over HTTPS.
 - **The live update line never appears:** check `VITE_WS_URL`, and that the Vercel origin is in `RENTBOOK_CORS_ORIGINS`; the WebSocket endpoint uses the same list.
 - **Invite emails do not arrive:** the backend logs a warning with the recipient. The landlord can still copy or WhatsApp the link from the invite page.
+- **Signing up answers 503 (`email_not_sent`):** the signup code couldn't be emailed. Check `SMTP_USERNAME` and `SMTP_PASSWORD`, and that Brevo has verified the `MAIL_FROM` address.
+- **Startup fails with "fixed-email-code must not be set in production":** remove `RENTBOOK_AUTH_FIXEDEMAILCODE`. That setting is only for local development.
 - **The tenant's Pay button is greyed out:** either the Razorpay keys are missing, or the landlord hasn't finished Payouts. `GET /api/v1/payouts/account` shows which: `paymentsConfigured` and `active`.
 - **A payment stays on "waiting for the bank":** the webhook isn't landing. In the Razorpay dashboard, open the webhook's delivery log:
   - a 400 there means the secret differs from `RAZORPAY_WEBHOOK_SECRET`;
   - no attempts at all means the URL or the subscribed events are wrong.
 
   Nothing is marked paid until a delivery succeeds. Razorpay keeps retrying for 24 hours, and the tenant can't pay the same charges twice in that time.
-- **Registration or accepting an invite answers 429 (`too_many_signups`):** more than 20 accounts were created from one address within the hour. Raise the limit with `RENTBOOK_AUTH_SIGNUPSPERHOUR` if many people really do sign up from one office network.
+- **Asking for a signup code or accepting an invite answers 429 (`too_many_signups`):** more than 20 signup codes or accounts were asked for from one address within the hour. Raise the limit with `RENTBOOK_AUTH_SIGNUPSPERHOUR` if many people really do sign up from one office network.
 - **Photo uploads fail in the browser but the API looks healthy:** the bucket's CORS rules don't allow the Vercel origin to `PUT` with a `Content-Type` header.

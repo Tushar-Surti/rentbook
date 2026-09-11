@@ -5,7 +5,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
-/** Plain-text email over SMTP: Mailpit locally, the SendGrid SMTP relay in production. */
+/** Plain-text email over SMTP: Mailpit locally, an SMTP relay such as Brevo in production. */
 @Component
 public class EmailSender {
 

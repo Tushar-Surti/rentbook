@@ -29,7 +29,9 @@ class ExpiredSessionCleaner {
 
     @Scheduled(cron = "0 15 4 * * *", zone = "Asia/Kolkata")
     public int clear() {
-        int gone = jdbc.update("delete from refresh_tokens where expires_at < ?", Timestamp.from(clock.instant()));
+        Timestamp now = Timestamp.from(clock.instant());
+        jdbc.update("delete from email_codes where expires_at < ?", now);
+        int gone = jdbc.update("delete from refresh_tokens where expires_at < ?", now);
         if (gone > 0) {
             log.info("Cleared {} expired sessions", gone);
         }

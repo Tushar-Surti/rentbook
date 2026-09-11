@@ -40,15 +40,26 @@ class AuthController {
             @NotBlank @Size(max = 120) String fullName,
             @NotBlank @Email @Size(max = 254) String email,
             @Pattern(regexp = PHONE_PATTERN, message = "Enter a mobile number with country code") String phone,
-            @NotBlank @Size(min = 8, max = 72, message = "Use 8 to 72 characters") String password) {
+            @NotBlank @Size(min = 8, max = 72, message = "Use 8 to 72 characters") String password,
+            @NotBlank @Pattern(regexp = "^[0-9]{6}$", message = "Enter the 6-digit code from the email") String code) {
+    }
+
+    record CodeRequest(@NotBlank @Email @Size(max = 254) String email) {
     }
 
     record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {
     }
 
+    @PostMapping("/register/code")
+    ResponseEntity<Void> sendCode(@Valid @RequestBody CodeRequest body) {
+        authService.sendSignupCode(body.email());
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/register")
     ResponseEntity<SessionCookies.SessionResponse> register(@Valid @RequestBody RegisterRequest body) {
-        Sessions.Session session = authService.registerLandlord(body.fullName(), body.email(), body.phone(), body.password());
+        Sessions.Session session = authService.registerLandlord(
+                body.fullName(), body.email(), body.phone(), body.password(), body.code());
         return cookies.respond(session, HttpStatus.CREATED);
     }
 

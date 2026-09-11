@@ -18,28 +18,42 @@ const schema = z.object({
   password: z.string().min(8, 'Use at least 8 characters').max(72, 'Use 72 characters or fewer'),
 })
 
-type Values = z.infer<typeof schema>
+const codeSchema = z.object({
+  code: z.string().trim().regex(/^[0-9]{6}$/, 'Enter the 6-digit code from the email'),
+})
 
+type Values = z.infer<typeof schema>
+type CodeValues = z.infer<typeof codeSchema>
+
+const unreachable = 'Could not reach Rentbook. Check your connection.'
+
+/** Two steps: the account details, then the code emailed to prove the address. */
 export function RegisterPage() {
-  const { register: createAccount } = useAuth()
+  const { sendSignupCode } = useAuth()
+  const [details, setDetails] = useState<Values>()
   const [formError, setFormError] = useState<string>()
   const { register, handleSubmit, formState, setError } = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: { phone: '' },
   })
 
-  const submit = handleSubmit(async ({ fullName, email, phone, password }) => {
+  const submit = handleSubmit(async (values) => {
     setFormError(undefined)
     try {
-      await createAccount({ fullName, email, phone: phone ? `+91${phone}` : undefined, password })
+      await sendSignupCode(values.email)
+      setDetails(values)
     } catch (error) {
       if (error instanceof ApiError && error.code === 'email_taken') {
         setError('email', { message: error.message })
       } else {
-        setFormError(error instanceof ApiError ? error.message : 'Could not reach Rentbook. Check your connection.')
+        setFormError(error instanceof ApiError ? error.message : unreachable)
       }
     }
   })
+
+  if (details) {
+    return <CodeStep details={details} onChangeEmail={() => setDetails(undefined)} />
+  }
 
   return (
     <AuthLayout
@@ -59,6 +73,7 @@ export function RegisterPage() {
           type="email"
           autoComplete="email"
           inputMode="email"
+          hint="We'll email a code to check it's yours."
           error={formState.errors.email?.message}
           {...register('email')}
         />
@@ -82,7 +97,80 @@ export function RegisterPage() {
         />
         <div className={authStyles.actions}>
           <Button type="submit" block busy={formState.isSubmitting}>
+            {formState.isSubmitting ? 'Sending the code' : 'Email me a code'}
+          </Button>
+        </div>
+      </form>
+    </AuthLayout>
+  )
+}
+
+function CodeStep({ details, onChangeEmail }: { details: Values; onChangeEmail: () => void }) {
+  const { register: createAccount, sendSignupCode } = useAuth()
+  const [formError, setFormError] = useState<string>()
+  const [notice, setNotice] = useState<string>()
+  const [resending, setResending] = useState(false)
+  const { register, handleSubmit, formState, setError } = useForm<CodeValues>({ resolver: zodResolver(codeSchema) })
+
+  const submit = handleSubmit(async ({ code }) => {
+    setFormError(undefined)
+    const { fullName, email, phone, password } = details
+    try {
+      await createAccount({ fullName, email, phone: phone ? `+91${phone}` : undefined, password, code })
+    } catch (error) {
+      if (error instanceof ApiError && (error.code === 'wrong_code' || error.code === 'code_expired')) {
+        setError('code', { message: error.message })
+      } else {
+        setFormError(error instanceof ApiError ? error.message : unreachable)
+      }
+    }
+  })
+
+  const resend = async () => {
+    setFormError(undefined)
+    setNotice(undefined)
+    setResending(true)
+    try {
+      await sendSignupCode(details.email)
+      setNotice('A new code is on its way. The old one no longer works.')
+    } catch (error) {
+      setFormError(error instanceof ApiError ? error.message : unreachable)
+    } finally {
+      setResending(false)
+    }
+  }
+
+  return (
+    <AuthLayout
+      heading="Check your email"
+      lede={`We sent a 6-digit code to ${details.email}. It works for 10 minutes.`}
+      below={
+        <p>
+          Wrong address?{' '}
+          <button type="button" className={authStyles.inlineAction} onClick={onChangeEmail}>
+            Change your email
+          </button>
+        </p>
+      }
+    >
+      <form className={authStyles.form} onSubmit={submit} noValidate>
+        <FormError>{formError}</FormError>
+        <TextField
+          label="Code"
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          maxLength={6}
+          autoFocus
+          hint={notice ?? "Can't find it? Look in spam, or send a new one."}
+          error={formState.errors.code?.message}
+          {...register('code')}
+        />
+        <div className={authStyles.actions}>
+          <Button type="submit" block busy={formState.isSubmitting}>
             {formState.isSubmitting ? 'Creating your account' : 'Create account'}
+          </Button>
+          <Button type="button" variant="secondary" block busy={resending} onClick={resend}>
+            {resending ? 'Sending' : 'Send a new code'}
           </Button>
         </div>
       </form>

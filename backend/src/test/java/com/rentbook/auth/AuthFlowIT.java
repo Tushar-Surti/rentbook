@@ -44,8 +44,8 @@ class AuthFlowIT extends IntegrationTest {
 
     @Test
     void theRefreshCookieIsHttpOnlyAndScopedToAuth() throws Exception {
-        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-                        {"fullName":"Lata Iyer","email":"%s","password":"%s"}""".formatted(Flows.email("cookie"), Flows.PASSWORD)))
+        String email = Flows.email("cookie");
+        register(email, flows.emailedCode(email))
                 .andExpect(status().isCreated())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("HttpOnly")))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Secure")))
@@ -65,14 +65,59 @@ class AuthFlowIT extends IntegrationTest {
     @Test
     void registrationAlwaysCreatesALandlordAndEmailsAreUnique() throws Exception {
         String email = Flows.email("unique");
+        String code = flows.emailedCode(email);
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-                        {"fullName":"Ravi Kumar","email":"%s","password":"%s","role":"TENANT"}""".formatted(email, Flows.PASSWORD)))
+                        {"fullName":"Ravi Kumar","email":"%s","password":"%s","code":"%s","role":"TENANT"}"""
+                        .formatted(email, Flows.PASSWORD, code)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.user.role").value("LANDLORD"));
-        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-                        {"fullName":"Ravi Kumar","email":"%s","password":"%s"}""".formatted(email.toUpperCase(), Flows.PASSWORD)))
+        register(email.toUpperCase(), code)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("email_taken"));
+        flows.sendCode(email.toUpperCase())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("email_taken"));
+    }
+
+    @Test
+    void anAccountNeedsTheCodeEmailedToThatAddress() throws Exception {
+        String email = Flows.email("code");
+        register(email, "123456").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("code_expired"));
+
+        String code = flows.emailedCode(email);
+        assertThat(code).hasSize(6);
+        // A second email within the minute is refused, so the address can't be flooded.
+        flows.sendCode(email).andExpect(status().isTooManyRequests());
+        // Another address's code is no good here.
+        String other = Flows.email("other");
+        register(email, flows.emailedCode(other)).andExpect(jsonPath("$.code").value("wrong_code"));
+
+        CLOCK.advance(EmailCodes.TTL);
+        register(email, code).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("code_expired"));
+
+        String fresh = flows.emailedCode(email);
+        register(email, fresh).andExpect(status().isCreated());
+        // Used up with the account.
+        register(email, fresh).andExpect(status().isConflict());
+    }
+
+    @Test
+    void fiveWrongCodesUseTheCodeUp() throws Exception {
+        String email = Flows.email("guess");
+        String code = flows.emailedCode(email);
+        String wrong = code.equals("000000") ? "111111" : "000000";
+        for (int i = 0; i < EmailCodes.MAX_ATTEMPTS; i++) {
+            register(email, wrong).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("wrong_code"));
+        }
+        register(email, code).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("code_expired"));
+        Integer accounts = jdbc.queryForObject("select count(*) from users where email = ?", Integer.class, email);
+        assertThat(accounts).isZero();
+    }
+
+    private org.springframework.test.web.servlet.ResultActions register(String email, String code) throws Exception {
+        return mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+                {"fullName":"Lata Iyer","email":"%s","password":"%s","code":"%s"}""".formatted(email, Flows.PASSWORD, code)));
     }
 
     @Autowired

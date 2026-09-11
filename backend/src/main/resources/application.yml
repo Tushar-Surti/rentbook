@@ -115,6 +115,8 @@ rentbook:
   auth:
     cookie-secure: false
     signups-per-hour: 1000
+    # Every signup code is 000000 here (it's still emailed to Mailpit), so the e2e journey can sign up.
+    fixed-email-code: "000000"
   # MinIO from compose.yaml; the bucket is created on startup if it is missing.
   storage:
     endpoint: http://localhost:9000
@@ -133,11 +135,12 @@ spring:
   datasource:
     # SPRING_DATASOURCE_URL, when set (e.g. on Railway), takes precedence over these parts.
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:rentbook}
+  # Any SMTP relay; Brevo's free plan is the default (300 emails a day).
   mail:
-    host: smtp.sendgrid.net
-    port: 587
-    username: apikey
-    password: ${SENDGRID_API_KEY:}
+    host: ${SMTP_HOST:smtp-relay.brevo.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true

@@ -36,16 +36,16 @@ class SignupThrottleFilterTest {
     @Test
     void eachAddressGetsSoManySignupsAnHour() throws Exception {
         for (int i = 0; i < 3; i++) {
-            assertThat(post("/api/v1/auth/register", "10.0.0.1").getStatus()).isEqualTo(200);
+            assertThat(post("/api/v1/auth/register/code", "10.0.0.1").getStatus()).isEqualTo(200);
         }
         MockHttpServletResponse refused = post("/api/v1/invites/some-token/accept", "10.0.0.1");
         assertThat(refused.getStatus()).isEqualTo(429);
         assertThat(refused.getHeader("Retry-After")).isEqualTo("3600");
         assertThat(refused.getContentAsString()).contains("too_many_signups");
 
-        assertThat(post("/api/v1/auth/register", "10.0.0.2").getStatus()).isEqualTo(200);
+        assertThat(post("/api/v1/auth/register/code", "10.0.0.2").getStatus()).isEqualTo(200);
         now.set(now.get().plus(Duration.ofHours(1)));
-        assertThat(post("/api/v1/auth/register", "10.0.0.1").getStatus()).isEqualTo(200);
+        assertThat(post("/api/v1/auth/register/code", "10.0.0.1").getStatus()).isEqualTo(200);
     }
 
     @Test
@@ -53,7 +53,7 @@ class SignupThrottleFilterTest {
         for (int i = 0; i < 10; i++) {
             assertThat(post("/api/v1/auth/login", "10.0.0.3").getStatus()).isEqualTo(200);
         }
-        assertThat(post("/api/v1/auth/register", "10.0.0.3").getStatus()).isEqualTo(200);
+        assertThat(post("/api/v1/auth/register/code", "10.0.0.3").getStatus()).isEqualTo(200);
     }
 
     private MockHttpServletResponse post(String path, String address) throws Exception {
