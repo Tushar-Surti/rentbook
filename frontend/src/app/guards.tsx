@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, useLocation, useSearchParams } from 'react-router'
 import type { Role } from '../api/types'
 import { useAuth } from '../auth/AuthProvider'
@@ -43,8 +43,16 @@ export function GuestOnly({ children }: { children: ReactNode }) {
   return children
 }
 
+/** Signed in, `/` opens your own book; signed out, it's the front page, which loads only for visitors. */
 export function HomeRedirect() {
   const { state } = useAuth()
   if (state.status === 'loading') return <SessionLoading />
-  return <Navigate to={state.status === 'signed-in' ? homeFor(state.user.role) : '/login'} replace />
+  if (state.status === 'signed-in') return <Navigate to={homeFor(state.user.role)} replace />
+  return (
+    <Suspense fallback={<SessionLoading />}>
+      <HomePage />
+    </Suspense>
+  )
 }
+
+const HomePage = lazy(() => import('../home/HomePage').then((module) => ({ default: module.HomePage })))
