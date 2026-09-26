@@ -49,7 +49,7 @@ class ReceiptPdfRenderer {
 
     record ReceiptDocument(String number, String issuedOn, String tenant, String landlord, String landlordPan,
                            String home, String amount, String amountInWords, List<Line> lines,
-                           String paymentReference, String confirmedAt) {
+                           String proof) {
     }
 
     private final BaseFont text;
@@ -116,8 +116,7 @@ class ReceiptPdfRenderer {
         if (receipt.landlordPan() != null) {
             pdf.add(field("Landlord's PAN", receipt.landlordPan()));
         }
-        Paragraph proof = paragraph(0, phrase("Received online through Razorpay (payment " + receipt.paymentReference()
-                + "), confirmed by Razorpay's signed notification on " + receipt.confirmedAt() + ".", Hand.TEXT, 9, SOFT));
+        Paragraph proof = paragraph(0, phrase(receipt.proof(), Hand.TEXT, 9, SOFT));
         proof.setSpacingBefore(16);
         pdf.add(proof);
         pdf.add(paragraph(0, phrase("Issued through Rentbook on behalf of the landlord.", Hand.TEXT, 9, SOFT)));

@@ -43,7 +43,11 @@ export function LandlordLayout() {
     }
     if (event.type === 'payment.confirmed') {
       const paid = event.data as PaymentEvent
-      setLatest(`Razorpay confirmed ${paid.tenantName ?? 'a tenant'}'s payment of ${rupees(paid.amountPaise)}.`)
+      setLatest(
+        paid.method && paid.method !== 'RAZORPAY'
+          ? `Recorded ${paid.tenantName ?? 'a tenant'}'s payment of ${rupees(paid.amountPaise)}.`
+          : `Razorpay confirmed ${paid.tenantName ?? 'a tenant'}'s payment of ${rupees(paid.amountPaise)}.`,
+      )
       void queryClient.invalidateQueries({ queryKey: ['board'] })
       void queryClient.invalidateQueries({ queryKey: ['ledger', paid.leaseId] })
       void queryClient.invalidateQueries({ queryKey: ['receipts', paid.leaseId] })

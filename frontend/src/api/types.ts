@@ -203,15 +203,23 @@ export type Checkout = {
   prefill: { name: string; email: string; contact: string | null }
 }
 
+export type PaymentMethod = 'RAZORPAY' | 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE'
+
 export type Receipt = {
   id: string
   /** Numbered per landlord, as printed: "0001". */
   number: string
   issuedAt: string
   amountPaise: number
-  paymentReference: string
+  /** Razorpay's payment id; null when the landlord recorded the payment. */
+  paymentReference: string | null
   items: string[]
+  method: PaymentMethod
+  /** The day the landlord received it, for a payment they recorded. */
+  receivedOn: string | null
 }
+
+export type RecordedPayment = { paymentId: string; receiptId: string; receiptNumber: string; amountPaise: number }
 
 /** Pushed on /topic/leases/{id} to both parties; the landlord's own queue adds the tenant's name. */
 export type PaymentEvent = {
@@ -220,6 +228,7 @@ export type PaymentEvent = {
   receiptId: string
   receiptNumber: string
   amountPaise: number
+  method?: PaymentMethod
   tenantName?: string
 }
 

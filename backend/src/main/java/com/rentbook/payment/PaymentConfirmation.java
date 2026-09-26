@@ -35,7 +35,7 @@ class PaymentConfirmation {
 
     /** Both parties hear about it after commit; the tenant also gets the receipt by email. */
     record PaymentConfirmed(UUID paymentId, UUID leaseId, UUID tenantId, UUID landlordId, long amountPaise,
-                            UUID receiptId, String receiptNumber) {
+                            UUID receiptId, String receiptNumber, Payment.Method method) {
     }
 
     record PaymentFailed(UUID paymentId, UUID tenantId, String reason) {
@@ -72,7 +72,8 @@ class PaymentConfirmation {
         }
         Receipt receipt = receipts.issue(payment);
         events.publishEvent(new PaymentConfirmed(payment.getId(), payment.getLeaseId(), payment.getTenantId(),
-                payment.getLandlordId(), payment.getAmountPaise(), receipt.getId(), receipt.number()));
+                payment.getLandlordId(), payment.getAmountPaise(), receipt.getId(), receipt.number(),
+                Payment.Method.RAZORPAY));
         return true;
     }
 

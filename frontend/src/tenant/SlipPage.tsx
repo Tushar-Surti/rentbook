@@ -8,7 +8,7 @@ import { Mark } from '../design/Mark'
 import { Sheet } from '../design/Sheet'
 import { Stamp } from '../design/Stamp'
 import { useLeaseLive } from '../ledger/useLedger'
-import { formatDate, formatDayMonth, formatInstantDate, ordinal, rupees } from '../lib/format'
+import { formatDate, formatDayMonth, formatInstantDate, methodPhrase, ordinal, rupees } from '../lib/format'
 import { useLive } from '../realtime/LiveProvider'
 import { ReceiptDownload } from '../receipts/ReceiptDownload'
 import styles from './SlipPage.module.css'
@@ -153,7 +153,7 @@ function OwedSlip({ lines, total, overdue, landlord, payOnline, payment }: {
   )
 }
 
-/** Nothing owed. When a payment settled it, Razorpay's confirmation is stamped on the slip. */
+/** Nothing owed. When a payment settled it, the stamp shows who confirmed it: Razorpay, or the landlord. */
 function PaidSlip({ home, landing }: { home: TenantHome; landing: boolean }) {
   const receipt = home.lastReceipt
   const next = home.nextDueOn ? (
@@ -190,7 +190,16 @@ function PaidSlip({ home, landing }: { home: TenantHome; landing: boolean }) {
         </span>
       </div>
       <p className={styles.due}>
-        Received on <span className="entry">{formatInstantDate(receipt.issuedAt)}</span>, confirmed by Razorpay.
+        {receipt.method === 'RAZORPAY' || !receipt.receivedOn ? (
+          <>
+            Received on <span className="entry">{formatInstantDate(receipt.issuedAt)}</span>, confirmed by Razorpay.
+          </>
+        ) : (
+          <>
+            Paid {methodPhrase(receipt.method)} on <span className="entry">{formatDate(receipt.receivedOn)}</span>,
+            recorded by your landlord.
+          </>
+        )}
       </p>
       <p>{next}</p>
       <div className={styles.receipt}>

@@ -12,20 +12,43 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 /**
- * One checkout of one or more charges. Nothing counts as paid until Razorpay's signed webhook says the
- * order was paid: the browser's success callback only moves a payment to AWAITING_WEBHOOK.
+ * One payment of one or more charges. Online, nothing counts as paid until Razorpay's signed webhook
+ * says the order was paid: the browser's success callback only moves a payment to AWAITING_WEBHOOK.
+ * A landlord can also record money they received themselves (cash, UPI, a transfer, a cheque); that
+ * payment is captured on the landlord's word and carries no platform fee.
  */
 @Entity
 @Table(name = "payments")
 public class Payment extends BaseEntity {
 
     public enum Status { CREATED, AWAITING_WEBHOOK, CAPTURED, FAILED }
+
+    /** How the money arrived. Every method but RAZORPAY is recorded by the landlord. */
+    public enum Method {
+        RAZORPAY("online through Razorpay"),
+        CASH("in cash"),
+        UPI("by UPI"),
+        BANK_TRANSFER("by bank transfer"),
+        CHEQUE("by cheque");
+
+        private final String phrase;
+
+        Method(String phrase) {
+            this.phrase = phrase;
+        }
+
+        /** As it reads in a sentence: "Received in cash". */
+        public String phrase() {
+            return phrase;
+        }
+    }
 
     @Column(name = "lease_id", nullable = false, updatable = false)
     private UUID leaseId;
@@ -67,6 +90,19 @@ public class Payment extends BaseEntity {
     @Column(name = "captured_at")
     private Instant capturedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16, updatable = false)
+    private Method method = Method.RAZORPAY;
+
+    @Column(name = "received_on", updatable = false)
+    private LocalDate receivedOn;
+
+    @Column(length = 200, updatable = false)
+    private String note;
+
+    @Column(name = "recorded_by", updatable = false)
+    private UUID recordedBy;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "payment_charges", joinColumns = @JoinColumn(name = "payment_id"))
     @Column(name = "charge_id", nullable = false)
@@ -84,6 +120,20 @@ public class Payment extends BaseEntity {
         this.platformFeePaise = platformFeePaise;
         this.landlordSharePaise = amountPaise - platformFeePaise;
         this.chargeIds.addAll(chargeIds);
+    }
+
+    /** Money the landlord says they received themselves: paid in full to them, and captured at once. */
+    static Payment recordedByLandlord(UUID leaseId, UUID tenantId, UUID landlordId, long amountPaise,
+                                      Collection<UUID> chargeIds, Method method, LocalDate receivedOn, String note,
+                                      Instant now) {
+        Payment payment = new Payment(leaseId, tenantId, landlordId, amountPaise, 0, chargeIds);
+        payment.method = method;
+        payment.receivedOn = receivedOn;
+        payment.note = note;
+        payment.recordedBy = landlordId;
+        payment.status = Status.CAPTURED;
+        payment.capturedAt = now;
+        return payment;
     }
 
     void attachOrder(String orderId) {
@@ -168,6 +218,22 @@ public class Payment extends BaseEntity {
 
     public Instant getCapturedAt() {
         return capturedAt;
+    }
+
+    public Method getMethod() {
+        return method;
+    }
+
+    public boolean isRecordedByLandlord() {
+        return method != Method.RAZORPAY;
+    }
+
+    public LocalDate getReceivedOn() {
+        return receivedOn;
+    }
+
+    public String getNote() {
+        return note;
     }
 
     public Set<UUID> getChargeIds() {

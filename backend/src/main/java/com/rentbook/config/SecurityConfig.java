@@ -62,7 +62,8 @@ public class SecurityConfig {
                                 "/api/v1/dashboard/landlord", "/api/v1/payouts/**").hasRole("LANDLORD")
                         .requestMatchers(HttpMethod.GET, "/api/v1/invites").hasRole("LANDLORD")
                         .requestMatchers(HttpMethod.POST, "/api/v1/invites/*/resend", "/api/v1/invites/*/revoke",
-                                "/api/v1/leases/*/end", "/api/v1/leases/*/charges", "/api/v1/charges/*/waive")
+                                "/api/v1/leases/*/end", "/api/v1/leases/*/charges", "/api/v1/leases/*/payments",
+                                "/api/v1/charges/*/waive")
                         .hasRole("LANDLORD")
                         .requestMatchers("/api/v1/dashboard/tenant", "/api/v1/payments/**").hasRole("TENANT")
                         // The WebSocket handshake is open; STOMP CONNECT frames are authenticated instead.

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
@@ -57,8 +58,9 @@ public class ReceiptService {
         this.clock = clock;
     }
 
+    /** {@code method} says how it was paid; {@code receivedOn} is set when the landlord recorded it. */
     public record ReceiptView(UUID id, String number, Instant issuedAt, long amountPaise, String paymentReference,
-                              List<String> items) {
+                              List<String> items, Payment.Method method, LocalDate receivedOn) {
     }
 
     public record ReceiptFile(String filename, byte[] pdf) {
@@ -92,7 +94,7 @@ public class ReceiptService {
         List<String> items = charges.findAllById(payment.getChargeIds()).stream()
                 .sorted(Comparator.comparing(Charge::getDueOn)).map(Charge::getDescription).toList();
         return new ReceiptView(receipt.getId(), receipt.number(), receipt.getIssuedAt(), payment.getAmountPaise(),
-                payment.getRzpPaymentId(), items);
+                payment.getRzpPaymentId(), items, payment.getMethod(), payment.getReceivedOn());
     }
 
     @Transactional(readOnly = true)
@@ -120,9 +122,20 @@ public class ReceiptService {
                 Rupees.format(payment.getAmountPaise()),
                 IndianNumberWords.rupees(payment.getAmountPaise()),
                 lines,
-                payment.getRzpPaymentId(),
-                MOMENT.format(payment.getCapturedAt().atZone(IndiaTime.ZONE))));
+                proof(payment)));
         return new ReceiptFile("rentbook-receipt-" + receipt.number() + ".pdf", pdf);
+    }
+
+    /** How the money was received, as the receipt states it. */
+    private static String proof(Payment payment) {
+        String at = MOMENT.format(payment.getCapturedAt().atZone(IndiaTime.ZONE));
+        if (!payment.isRecordedByLandlord()) {
+            return "Received online through Razorpay (payment " + payment.getRzpPaymentId()
+                    + "), confirmed by Razorpay's signed notification on " + at + ".";
+        }
+        String note = payment.getNote() == null || payment.getNote().isBlank() ? "" : " (" + payment.getNote().strip() + ")";
+        return "Received " + payment.getMethod().phrase() + " on " + DAY.format(payment.getReceivedOn()) + note
+                + ". Recorded by the landlord on " + at + ".";
     }
 
     /** The full address of the home, as an HRA claim asks for it: unit, building, street, city and PIN. */

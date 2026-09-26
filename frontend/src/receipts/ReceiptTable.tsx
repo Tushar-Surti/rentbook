@@ -15,7 +15,7 @@ export function ReceiptTable({ receipts, caption, alignUnder = 'plain' }: {
   alignUnder?: 'plain' | 'withActions'
 }) {
   if (receipts.length === 0) {
-    return <p className={ledger.empty}>No receipts yet. Each payment Razorpay confirms gets one here.</p>
+    return <p className={ledger.empty}>No receipts yet. Each confirmed or recorded payment gets one here.</p>
   }
   const actions = alignUnder === 'withActions'
   return (

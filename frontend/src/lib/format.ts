@@ -101,3 +101,19 @@ export function isoDaysFromToday(days: number): string {
 export function monthLabel(yearMonth: string): string {
   return monthName(`${yearMonth}-01`)
 }
+
+/** How a payment arrived, as it reads in a sentence: "Paid in cash". */
+export function methodPhrase(method: string): string {
+  switch (method) {
+    case 'CASH':
+      return 'in cash'
+    case 'UPI':
+      return 'by UPI'
+    case 'BANK_TRANSFER':
+      return 'by bank transfer'
+    case 'CHEQUE':
+      return 'by cheque'
+    default:
+      return 'online'
+  }
+}

@@ -13,7 +13,10 @@ import { vaultQuery } from '../documents/queries'
 import { ReceiptTable } from '../receipts/ReceiptTable'
 import { receiptsQuery } from '../receipts/receipts'
 import { AddChargeForm } from './AddChargeForm'
+import { RecordPaymentForm } from './RecordPaymentForm'
 import styles from './LeasePage.module.css'
+
+const isOpen = (entry: LedgerEntry) => entry.status === 'DUE' || entry.status === 'OVERDUE' || entry.status === 'UPCOMING'
 
 /** One tenancy in the book: who lives there, on what terms, and the ledger both of them read. */
 export function LeasePage() {
@@ -118,6 +121,21 @@ export function LeasePage() {
           <SessionLoading />
         )}
       </section>
+
+      {view.status !== 'ENDED' && ledger.data && (
+        <section className={styles.section} aria-labelledby="record-heading">
+          <h2 id="record-heading" className={styles.sectionHeading}>
+            Record a payment
+          </h2>
+          <p className={styles.note}>
+            Paid you in cash, by UPI or another way? Tick what {view.tenant.fullName.split(' ')[0]} paid.
+          </p>
+          <RecordPaymentForm
+            leaseId={leaseId}
+            open={ledger.data.entries.filter(isOpen)}
+          />
+        </section>
+      )}
 
       {view.status !== 'ENDED' && (
         <section className={styles.section} aria-labelledby="charge-heading">

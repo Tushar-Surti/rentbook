@@ -1,0 +1,74 @@
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* The open charges, as ruled lines to tick off. */
+.charges {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.legend {
+  padding: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.charge {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+}
+
+.charge input {
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: var(--carbon);
+}
+
+.what {
+  display: grid;
+}
+
+.due {
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+}
+
+.amount {
+  font-weight: 550;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.recorded,
+.settled {
+  color: var(--carbon);
+  font-weight: 600;
+}
+
+.hint {
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+}

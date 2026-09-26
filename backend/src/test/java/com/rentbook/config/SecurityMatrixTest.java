@@ -84,6 +84,8 @@ class SecurityMatrixTest {
     @MockitoBean
     com.rentbook.payment.ReceiptService receiptService;
     @MockitoBean
+    com.rentbook.payment.RecordedPayments recordedPayments;
+    @MockitoBean
     com.rentbook.maintenance.TicketService ticketService;
     @MockitoBean
     com.rentbook.document.DocumentService documentService;
@@ -121,6 +123,9 @@ class SecurityMatrixTest {
         expectForbidden(post("/api/v1/leases/" + id + "/charges").contentType(MediaType.APPLICATION_JSON)
                 .content(CHARGE_BODY), tenant);
         expectForbidden(post("/api/v1/charges/" + id + "/waive"), tenant);
+        // A tenant can't mark their own rent paid.
+        expectForbidden(post("/api/v1/leases/" + id + "/payments").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"chargeIds\":[\"" + id + "\"],\"method\":\"CASH\",\"receivedOn\":\"2026-09-01\"}"), tenant);
         expectForbidden(get("/api/v1/dashboard/landlord"), tenant);
     }
 

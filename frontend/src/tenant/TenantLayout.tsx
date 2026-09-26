@@ -28,7 +28,9 @@ function describe(type: string, change: BookChange): string | null {
     return `${who ?? 'Your landlord'} waived ${change.description}.`
   }
   if (type === 'payment.confirmed') {
-    return `Razorpay confirmed your payment of ${amount}. Receipt ${change.receiptNumber} is ready.`
+    return change.method && change.method !== 'RAZORPAY'
+      ? `Your landlord recorded your payment of ${amount}. Receipt ${change.receiptNumber} is ready.`
+      : `Razorpay confirmed your payment of ${amount}. Receipt ${change.receiptNumber} is ready.`
   }
   return null
 }

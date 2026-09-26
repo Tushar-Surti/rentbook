@@ -41,6 +41,7 @@ class PaymentNotifications {
         data.put("receiptId", confirmed.receiptId());
         data.put("receiptNumber", confirmed.receiptNumber());
         data.put("amountPaise", confirmed.amountPaise());
+        data.put("method", confirmed.method());
         live.toLease(confirmed.leaseId(), "payment.confirmed", data);
 
         Map<String, Object> forLandlord = new HashMap<>(data);
@@ -54,6 +55,18 @@ class PaymentNotifications {
         users.findById(confirmed.tenantId()).ifPresent(tenant -> {
             String amount = Rupees.format(confirmed.amountPaise());
             String link = rentbook.appBaseUrl().toString().replaceAll("/+$", "") + "/t/rent";
+            if (confirmed.method() != Payment.Method.RAZORPAY) {
+                String landlord = users.findById(confirmed.landlordId()).map(User::getFullName).orElse("Your landlord");
+                notifier.send(tenant.getId(), Notifier.Channel.EMAIL, "payment.receipt",
+                        "receipt:" + confirmed.receiptId() + ":email", tenant.getEmail(), new Notifier.Message(
+                                "Payment of " + amount + " recorded, receipt " + confirmed.receiptNumber(),
+                                "Hi %s,%n%n%s recorded your payment of %s, paid %s. Receipt %s is in your rent book:%n%s%n"
+                                        .formatted(tenant.getFullName(), landlord, amount, confirmed.method().phrase(),
+                                                confirmed.receiptNumber(), link),
+                                "Rentbook: %s recorded your payment of %s. Receipt %s: %s"
+                                        .formatted(landlord, amount, confirmed.receiptNumber(), link)));
+                return;
+            }
             notifier.send(tenant.getId(), Notifier.Channel.EMAIL, "payment.receipt",
                     "receipt:" + confirmed.receiptId() + ":email", tenant.getEmail(), new Notifier.Message(
                             "Payment of " + amount + " confirmed, receipt " + confirmed.receiptNumber(),
