@@ -75,3 +75,9 @@
   display: grid;
   gap: var(--space-3);
 }
+
+.ended {
+  padding: var(--space-3) var(--space-4);
+  background: var(--rail);
+  font-weight: 600;
+}

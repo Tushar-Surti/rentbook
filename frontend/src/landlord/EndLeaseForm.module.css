@@ -1,0 +1,56 @@
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.note {
+  max-width: var(--measure);
+  color: var(--graphite-soft);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-4);
+}
+
+.row > :first-child {
+  width: min(100%, 14rem);
+}
+
+/* The question sits on its own ruled line, like the ledger's waive confirmation. */
+.confirm {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.question {
+  font-weight: 600;
+}
+
+.question:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 4px;
+}
+
+.owed {
+  padding: var(--space-3) var(--space-4);
+  background: var(--crimson-wash);
+  color: var(--crimson);
+  font-weight: 600;
+}
+
+.email {
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

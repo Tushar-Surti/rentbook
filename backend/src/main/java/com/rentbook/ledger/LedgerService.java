@@ -158,6 +158,24 @@ public class LedgerService {
         return entry(charge, IndiaTime.today(clock));
     }
 
+    /**
+     * Rent for a month that starts after the tenant's last day isn't owed, even if it was already added
+     * ahead of its due date, so it's waived. The month they leave in stays as it is.
+     */
+    @EventListener
+    void lastDaySet(LeaseService.LeaseEndSet event) {
+        LeaseService.LeaseView lease = event.lease();
+        Instant now = clock.instant();
+        for (Charge charge : charges.findByLeaseIdInAndStatus(List.of(lease.id()), Charge.Status.DUE)) {
+            if (charge.getKind() == Charge.Kind.RENT && charge.getPeriodMonth() != null
+                    && charge.getPeriodMonth().isAfter(lease.endsOn())) {
+                charge.waive(lease.landlord().id(), now);
+                events.publishEvent(new LedgerChanged(lease.id(), "charge.waived", charge.getDescription(),
+                        charge.getAmountPaise(), lease.landlord().fullName()));
+            }
+        }
+    }
+
     /** Unpaid charges per lease, for the dashboards. */
     @Transactional(readOnly = true)
     public Map<UUID, List<Charge>> openCharges(Collection<UUID> leaseIds) {

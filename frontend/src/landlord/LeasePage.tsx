@@ -13,6 +13,7 @@ import { vaultQuery } from '../documents/queries'
 import { ReceiptTable } from '../receipts/ReceiptTable'
 import { receiptsQuery } from '../receipts/receipts'
 import { AddChargeForm } from './AddChargeForm'
+import { EndLeaseForm } from './EndLeaseForm'
 import { RecordPaymentForm } from './RecordPaymentForm'
 import styles from './LeasePage.module.css'
 
@@ -71,6 +72,12 @@ export function LeasePage() {
           </a>
         </p>
       </header>
+
+      {view.status === 'ENDED' && (
+        <p className={styles.ended} role="status">
+          This lease ended{view.endsOn ? ` on ${formatDate(view.endsOn)}` : ''}. {unit} is vacant again.
+        </p>
+      )}
 
       <dl className={styles.terms}>
         <div>
@@ -161,6 +168,15 @@ export function LeasePage() {
         )}
         <FileDocument leaseId={leaseId} viewer="LANDLORD" prominent={false} />
       </section>
+
+      {view.status !== 'ENDED' && (
+        <section className={styles.section} aria-labelledby="end-heading">
+          <h2 id="end-heading" className={styles.sectionHeading}>
+            {view.status === 'NOTICE' ? 'Moving out' : 'End this lease'}
+          </h2>
+          <EndLeaseForm lease={view} outstandingPaise={ledger.data?.outstandingPaise ?? 0} />
+        </section>
+      )}
     </div>
   )
 }

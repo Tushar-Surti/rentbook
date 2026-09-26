@@ -9,6 +9,7 @@ import com.rentbook.property.UnitRepository;
 import com.rentbook.user.Role;
 import com.rentbook.user.User;
 import com.rentbook.user.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,14 +36,20 @@ public class LeaseService {
     private final PropertyRepository properties;
     private final UserRepository users;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     LeaseService(LeaseRepository leases, UnitRepository units, PropertyRepository properties, UserRepository users,
-                 Clock clock) {
+                 Clock clock, ApplicationEventPublisher events) {
         this.leases = leases;
         this.units = units;
         this.properties = properties;
         this.users = users;
         this.clock = clock;
+        this.events = events;
+    }
+
+    /** The landlord set the tenant's last day: ended now, or on notice until then. The tenant hears after commit. */
+    public record LeaseEndSet(LeaseView lease) {
     }
 
     public record UnitRef(UUID id, Unit.Kind kind, String label, String roomLabel) {
@@ -99,7 +106,9 @@ public class LeaseService {
         if (lease.getStatus() == Lease.Status.ENDED) {
             units.findById(lease.getUnitId()).ifPresent(Unit::markVacant);
         }
-        return views(List.of(lease)).getFirst();
+        LeaseView view = views(List.of(lease)).getFirst();
+        events.publishEvent(new LeaseEndSet(view));
+        return view;
     }
 
     /** Leases on notice whose end date has arrived become ended, and their units vacant. */
