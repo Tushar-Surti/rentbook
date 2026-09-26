@@ -70,6 +70,10 @@ public class User extends BaseEntity {
         return phone;
     }
 
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+    }
+
     public String getPasswordHash() {
         return passwordHash;
     }

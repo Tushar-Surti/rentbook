@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 import { createBrowserRouter } from 'react-router'
+import { ForgotPasswordPage } from '../auth/ForgotPasswordPage'
 import { LoginPage } from '../auth/LoginPage'
 import { RegisterPage } from '../auth/RegisterPage'
 import { AcceptInvitePage } from '../invite/AcceptInvitePage'
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
       { path: '/', element: <HomeRedirect /> },
       { path: '/login', element: <GuestOnly><LoginPage /></GuestOnly> },
       { path: '/register', element: <GuestOnly><RegisterPage /></GuestOnly> },
+      { path: '/forgot-password', element: <GuestOnly><ForgotPasswordPage /></GuestOnly> },
       { path: '/invite/:token', element: <AcceptInvitePage /> },
       {
         path: '/l',

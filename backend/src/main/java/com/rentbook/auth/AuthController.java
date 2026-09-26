@@ -47,6 +47,12 @@ class AuthController {
     record CodeRequest(@NotBlank @Email @Size(max = 254) String email) {
     }
 
+    record PasswordResetRequest(
+            @NotBlank @Email @Size(max = 254) String email,
+            @NotBlank @Pattern(regexp = "^[0-9]{6}$", message = "Enter the 6-digit code from the email") String code,
+            @NotBlank @Size(min = 8, max = 72, message = "Use 8 to 72 characters") String password) {
+    }
+
     record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {
     }
 
@@ -61,6 +67,18 @@ class AuthController {
         Sessions.Session session = authService.registerLandlord(
                 body.fullName(), body.email(), body.phone(), body.password(), body.code());
         return cookies.respond(session, HttpStatus.CREATED);
+    }
+
+    /** Always 204, whether or not the address has an account. */
+    @PostMapping("/password/code")
+    ResponseEntity<Void> sendPasswordResetCode(@Valid @RequestBody CodeRequest body) {
+        authService.sendPasswordResetCode(body.email());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password/reset")
+    ResponseEntity<SessionCookies.SessionResponse> resetPassword(@Valid @RequestBody PasswordResetRequest body) {
+        return cookies.respond(authService.resetPassword(body.email(), body.code(), body.password()), HttpStatus.OK);
     }
 
     @PostMapping("/login")

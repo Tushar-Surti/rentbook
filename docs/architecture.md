@@ -95,7 +95,7 @@ Base path `/api/v1`. Errors are `application/problem+json`. Lists are paged (`pa
 
 | Area | Endpoints | Access |
 |---|---|---|
-| Auth | `POST /auth/register/code`, `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /me` | register is for landlords only, with the code emailed by register/code |
+| Auth | `POST /auth/register/code`, `POST /auth/register`, `POST /auth/login`, `POST /auth/password/code`, `POST /auth/password/reset`, `POST /auth/refresh`, `POST /auth/logout`, `GET /me` | register is for landlords only, with the code emailed by register/code; password/code answers 204 whether or not the account exists |
 | Invites by token | `GET /invites/{token}`, `POST /invites/{token}/accept` | public, token-gated; accepting creates the TENANT user and the lease |
 | Invites | `POST /units/{id}/invites`, `GET /invites`, `POST /invites/{id}/resend`, `POST /invites/{id}/revoke` | landlord |
 | Portfolio | `GET, POST /properties`, `GET, PATCH /properties/{id}`, `GET, POST /properties/{id}/units`, `PATCH /units/{id}` | landlord |
@@ -128,6 +128,7 @@ STOMP over a native WebSocket at `/ws` (no SockJS). The client sends `Authorizat
 - Authorization: public endpoints are listed explicitly; role checks use `@PreAuthorize`; ownership is enforced inside queries through `AccessPolicy`.
 - WebSocket: CONNECT is authenticated with the same JWT decoder, and every SUBSCRIBE is checked against lease or ticket membership.
 - A landlord account needs a 6-digit code emailed to its address first (`POST /auth/register/code`), so every landlord owns the inbox their invites and receipts go to. One code per address, stored as an HMAC keyed with the JWT secret; it lasts 10 minutes, allows five wrong tries, can be re-sent once a minute, and is used up by the account it creates. The dev profile fixes the code at `000000` for the e2e journey; the prod profile refuses to start with a fixed code.
+- A forgotten password is reset with a 6-digit code emailed to the account (`POST /auth/password/code`, then `POST /auth/password/reset`), under the same rules as signup codes. Asking for a code answers the same way whether or not the address has an account. A reset ends every existing session for that user and signs them in fresh.
 - Passwords use the delegating encoder (bcrypt). Login attempts are throttled per IP address and email.
 
 ## Ledger and reminders

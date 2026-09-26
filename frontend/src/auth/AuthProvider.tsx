@@ -12,6 +12,8 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<unknown>
   sendSignupCode: (email: string) => Promise<unknown>
   register: (input: RegisterInput) => Promise<unknown>
+  sendPasswordResetCode: (email: string) => Promise<unknown>
+  resetPassword: (input: { email: string; code: string; password: string }) => Promise<unknown>
   acceptInvite: (token: string, input: AcceptInput) => Promise<unknown>
   logout: () => Promise<unknown>
 }
@@ -38,6 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sendSignupCode: (email) => api<void>('/auth/register/code', { method: 'POST', json: { email } }),
       register: (input) =>
         api<SessionResponse>('/auth/register', { method: 'POST', json: input }).then(setSession),
+      sendPasswordResetCode: (email) => api<void>('/auth/password/code', { method: 'POST', json: { email } }),
+      resetPassword: (input) =>
+        api<SessionResponse>('/auth/password/reset', { method: 'POST', json: input }).then(setSession),
       acceptInvite: (token, input) =>
         api<SessionResponse>(`/invites/${encodeURIComponent(token)}/accept`, { method: 'POST', json: input }).then(
           setSession,

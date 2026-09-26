@@ -20,7 +20,8 @@ import java.util.regex.Pattern;
  * Accounts are created in two places: landlord registration and accepting an invite. Each client address
  * may do that only so many times an hour, so neither endpoint can be used to mass-create accounts.
  * Registration is counted where it starts, at the emailed code: an account needs a code, and counting
- * there also stops the endpoint being used to flood someone's inbox.
+ * there also stops the endpoint being used to flood someone's inbox. Password-reset codes are counted
+ * with them for the same reason.
  * Counts live in memory, which is enough for one instance; several instances would share a store.
  */
 @Component
@@ -46,7 +47,7 @@ class SignupThrottleFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
         return !"POST".equals(request.getMethod())
-                || !(path.equals("/api/v1/auth/register/code") || ACCEPT.matcher(path).matches());
+                || !(path.equals("/api/v1/auth/register/code") || path.equals("/api/v1/auth/password/code") || ACCEPT.matcher(path).matches());
     }
 
     @Override
@@ -65,7 +66,7 @@ class SignupThrottleFilter extends OncePerRequestFilter {
             response.setContentType("application/problem+json");
             response.getWriter().write("""
                     {"type":"about:blank","title":"Too Many Requests","status":429,"code":"too_many_signups",\
-                    "detail":"Too many new accounts from this network. Try again in an hour."}""");
+                    "detail":"Too many requests from this network. Try again in an hour."}""");
             return;
         }
         chain.doFilter(request, response);

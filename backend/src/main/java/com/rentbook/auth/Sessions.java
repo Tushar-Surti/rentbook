@@ -74,6 +74,12 @@ public class Sessions {
                 .ifPresent(token -> refreshTokens.revokeFamily(token.getFamilyId(), clock.instant()));
     }
 
+    /** Signs the user out on every device. */
+    @Transactional
+    public void endAll(User user) {
+        refreshTokens.revokeAllForUser(user.getId(), clock.instant());
+    }
+
     private Issued issue(User user, UUID familyId, Instant now) {
         String raw = SecureTokens.generate();
         Instant expiresAt = now.plus(properties.jwt().refreshTokenTtl());

@@ -8,12 +8,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.Duration;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -113,6 +117,70 @@ class AuthFlowIT extends IntegrationTest {
         register(email, code).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("code_expired"));
         Integer accounts = jdbc.queryForObject("select count(*) from users where email = ?", Integer.class, email);
         assertThat(accounts).isZero();
+    }
+
+    @Test
+    void aForgottenPasswordIsResetWithAnEmailedCodeAndOldSessionsEnd() throws Exception {
+        String email = Flows.email("forgot");
+        Flows.Session before = flows.registerLandlord(email);
+
+        postJson("/api/v1/auth/password/code", "{\"email\":\"%s\"}".formatted(email.toUpperCase()))
+                .andExpect(status().isNoContent());
+        String code = emailedCode(email);
+        resetPassword(email, code.equals("000000") ? "111111" : "000000", "a brand new password")
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("wrong_code"));
+        resetPassword(email, code, "short").andExpect(status().isBadRequest());
+
+        resetPassword(email, code, "a brand new password")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.email").value(email))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("rb_refresh=")));
+
+        // The old password and every session from before are gone; the code is used up.
+        login(email, Flows.PASSWORD).andExpect(status().isUnauthorized());
+        login(email, "a brand new password").andExpect(status().isOk());
+        flows.refresh(before.refreshToken()).andExpect(status().isUnauthorized());
+        resetPassword(email, code, "yet another password").andExpect(jsonPath("$.code").value("code_expired"));
+    }
+
+    @Test
+    void anUnknownAddressGetsTheSameAnswerAndNoEmail() throws Exception {
+        String stranger = Flows.email("stranger");
+        postJson("/api/v1/auth/password/code", "{\"email\":\"%s\"}".formatted(stranger)).andExpect(status().isNoContent());
+        verify(mail, never()).send(any(SimpleMailMessage.class));
+        resetPassword(stranger, "123456", "a brand new password")
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("code_expired"));
+
+        // A second request within the minute also looks the same from outside.
+        String email = Flows.email("twice");
+        flows.registerLandlord(email);
+        postJson("/api/v1/auth/password/code", "{\"email\":\"%s\"}".formatted(email)).andExpect(status().isNoContent());
+        postJson("/api/v1/auth/password/code", "{\"email\":\"%s\"}".formatted(email)).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void aSignupCodeCannotResetAPassword() throws Exception {
+        String email = Flows.email("mixed");
+        flows.registerLandlord(email);
+        String other = Flows.email("unused");
+        String signupCode = flows.emailedCode(other);
+        resetPassword(email, signupCode, "a brand new password").andExpect(jsonPath("$.code").value("code_expired"));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions postJson(String path, String json) throws Exception {
+        return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(path)
+                .contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions resetPassword(String email, String code, String password)
+            throws Exception {
+        return postJson("/api/v1/auth/password/reset", """
+                {"email":"%s","code":"%s","password":"%s"}""".formatted(email, code, password));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions login(String email, String password) throws Exception {
+        return postJson("/api/v1/auth/login", """
+                {"email":"%s","password":"%s"}""".formatted(email, password));
     }
 
     private org.springframework.test.web.servlet.ResultActions register(String email, String code) throws Exception {

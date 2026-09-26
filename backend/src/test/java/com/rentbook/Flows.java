@@ -90,13 +90,17 @@ public final class Flows {
         return invite(landlord, unitId, tenantEmail, soon());
     }
 
-    /** Rent ₹12,500 due on the 5th, deposit ₹25,000, and the tenant's mobile on the invite. */
+    /**
+     * Rent ₹12,500, deposit ₹25,000, and the tenant's mobile on the invite. Rent falls due on the move-in
+     * day of the month, so the next month's rent is always weeks away and never inside the ledger's
+     * lead window, whatever day the tests run.
+     */
     public ResultActions invite(Session landlord, String unitId, String tenantEmail, LocalDate startsOn)
             throws Exception {
         return authed(post("/api/v1/units/" + unitId + "/invites"), landlord, """
                 {"tenantName":"Asha Rao","email":"%s","phone":"+919812345678","rentPaise":1250000,
-                 "depositPaise":2500000,"dueDay":5,"startsOn":"%s"}
-                """.formatted(tenantEmail, startsOn));
+                 "depositPaise":2500000,"dueDay":%d,"startsOn":"%s"}
+                """.formatted(tenantEmail, Math.min(startsOn.getDayOfMonth(), 28), startsOn));
     }
 
     public String inviteToken(Session landlord, String unitId, String tenantEmail) throws Exception {

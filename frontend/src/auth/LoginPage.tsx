@@ -38,6 +38,9 @@ export function LoginPage() {
       below={
         <>
           <p>
+            Forgot your password? <Link to="/forgot-password">Reset it by email</Link>
+          </p>
+          <p>
             New landlord? <Link to="/register">Create your account</Link>
           </p>
           <p>Tenants join from the invite link their landlord sends.</p>

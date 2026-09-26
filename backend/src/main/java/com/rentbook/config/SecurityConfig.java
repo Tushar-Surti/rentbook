@@ -51,6 +51,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/register/code", "/api/v1/auth/register", "/api/v1/auth/login",
+                                "/api/v1/auth/password/code", "/api/v1/auth/password/reset",
                                 "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/invites/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/invites/*/accept").permitAll()
