@@ -18,7 +18,4 @@ frontend/dist/
 frontend/test-results/
 frontend/playwright-report/
 
-# Machine-local tool state
-.claude/settings.local.json
-.impeccable/config.local.json
-.impeccable/review/
+/screenshots/

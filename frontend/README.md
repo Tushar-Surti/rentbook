@@ -1,6 +1,6 @@
 # Rentbook frontend
 
-The React app for both roles: landlords work in `/l`, tenants in `/t`. It uses Vite, React 19, TypeScript, React Router, TanStack Query, React Hook Form with Zod, and CSS Modules over the Carbon Copy tokens in `src/design/tokens.css`. The design system is written up in [`../DESIGN.md`](../DESIGN.md).
+The React app for both roles: landlords work in `/l`, tenants in `/t`. It uses Vite, React 19, TypeScript, React Router, TanStack Query, React Hook Form with Zod, and CSS Modules over the Carbon Copy tokens in `src/design/tokens.css`.
 
 ## Run it
 
@@ -35,7 +35,7 @@ java -jar ../backend/target/rentbook-0.0.1-SNAPSHOT.jar --spring.profiles.active
   --rentbook.razorpay.key-secret=e2e-key-secret \
   --rentbook.razorpay.webhook-secret=e2e-webhook-secret
 npm run dev
-SHOTS_DIR=../.impeccable/review npm run e2e
+SHOTS_DIR=../screenshots npm run e2e
 ```
 
 `SHOTS_DIR` is optional; set it to keep a full-page screenshot of every screen. The dev profile starts Postgres, MinIO and Mailpit through Docker Compose.

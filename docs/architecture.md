@@ -6,8 +6,6 @@ One platform, two roles (LANDLORD, TENANT), one set of rows. The rent ledger and
 
 ```
 rentbook/
-  PRODUCT.md            product truth (impeccable)
-  DESIGN.md             visual system, written after the first UI build
   compose.yaml          local infrastructure: postgres, minio, mailpit (+ "app" profile)
   render.yaml           Render blueprint for the backend and Postgres
   docs/                 this file and deployment.md
