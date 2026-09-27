@@ -6,7 +6,7 @@ Landlords and tenants read the *same* records. The lease, the rent ledger and th
 
 **Live demo:** [rentbook-omega.vercel.app](https://rentbook-omega.vercel.app) — payments run in Razorpay's test mode, so no real money moves. The backend is on a free plan, so the first request after a quiet spell can take up to a minute.
 
-![The landlord's register: every bed, who lives there, and who has paid this month](docs/screenshots/landlord-register.png)
+![Rentbook's home page: "One rent book. Two people. Written once." beside a sample rent book with Paid stamps](docs/screenshots/home-page.png)
 
 ## What it does
 
@@ -26,6 +26,10 @@ Landlords and tenants read the *same* records. The lease, the rent ledger and th
 Payments, new charges, repair updates and new documents appear on the other person's screen straight away, without a reload. Reminders go out by email (and optionally SMS) before, on and after the due date, never twice.
 
 ## Screenshots
+
+**The landlord's register** — every bed, who lives there, and who has paid this month.
+
+![The landlord's register: every bed, who lives there, and who has paid this month](docs/screenshots/landlord-register.png)
 
 | Tenant's rent slip (phone) | After the bank confirms |
 |---|---|
