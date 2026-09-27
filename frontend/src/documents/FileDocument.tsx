@@ -9,7 +9,9 @@ import { uploadFile } from '../lib/upload'
 import styles from './Documents.module.css'
 import { ACCEPTED_FILES, MAX_FILE_BYTES } from './labels'
 
+// Caretakers never see the shelf, so they have nothing to file.
 const OPTIONS: Record<Role, { value: DocumentType; label: string }[]> = {
+  CARETAKER: [],
   LANDLORD: [
     { value: 'LEASE', label: 'Lease agreement' },
     { value: 'OTHER', label: 'Something else' },

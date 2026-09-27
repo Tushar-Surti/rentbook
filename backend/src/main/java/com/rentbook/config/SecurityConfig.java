@@ -54,6 +54,14 @@ public class SecurityConfig {
                                 "/api/v1/auth/password/code", "/api/v1/auth/password/reset",
                                 "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/invites/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/caretaker-invites/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/caretaker-invites/*/accept").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/public/listings/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/public/listings/*/enquiries").permitAll()
+                        .requestMatchers("/api/v1/listings", "/api/v1/listings/**", "/api/v1/units/*/listing")
+                        .hasRole("LANDLORD")
+                        .requestMatchers("/api/v1/caretaker/**").hasRole("CARETAKER")
+                        .requestMatchers("/api/v1/caretakers", "/api/v1/caretakers/**").hasRole("LANDLORD")
                         .requestMatchers(HttpMethod.POST, "/api/v1/invites/*/accept").permitAll()
                         // Razorpay calls this directly; every delivery is verified by its HMAC signature instead.
                         .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/razorpay").permitAll()
@@ -63,8 +71,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/invites").hasRole("LANDLORD")
                         .requestMatchers(HttpMethod.POST, "/api/v1/invites/*/resend", "/api/v1/invites/*/revoke",
                                 "/api/v1/leases/*/end", "/api/v1/leases/*/charges", "/api/v1/leases/*/payments",
-                                "/api/v1/charges/*/waive")
+                                "/api/v1/charges/*/waive", "/api/v1/leases/*/deposit/refund")
                         .hasRole("LANDLORD")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/leases/*/deposit").hasRole("LANDLORD")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/leases/*/deposit/accept", "/api/v1/leases/*/deposit/query")
+                        .hasRole("TENANT")
                         .requestMatchers("/api/v1/dashboard/tenant", "/api/v1/payments/**").hasRole("TENANT")
                         // The WebSocket handshake is open; STOMP CONNECT frames are authenticated instead.
                         .requestMatchers("/ws", "/ws/**").permitAll()

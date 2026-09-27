@@ -104,6 +104,10 @@ Base path `/api/v1`. Errors are `application/problem+json`. Lists are paged (`pa
 | Payments | `POST /payments/checkout`, `POST /payments/{id}/client-callback`, `GET /payments/{id}` | tenant |
 | Payouts | `GET /payouts/account`, `POST /payouts/account` | landlord |
 | Webhook | `POST /webhooks/razorpay` | Razorpay, HMAC-verified |
+| Deposit | `GET, PUT /leases/{id}/deposit`, `POST /leases/{id}/deposit/accept`, `/query`, `/refund` | both read; the landlord proposes and records the refund, the tenant accepts or asks; deductions that clear unpaid charges are paid from the deposit with a receipt |
+| Caretakers | `GET, POST /caretakers`, `PUT /caretakers/{id}/properties`, `POST /caretakers/{id}/resend`, `DELETE /caretakers/{id}`; `GET /caretaker-invites/{token}`, `POST .../accept` | landlord; invitee by token |
+| Caretaker work | `GET /caretaker/board`, `GET /caretaker/leases/{id}`, `/ledger`, `POST /caretaker/leases/{id}/payments`, `GET /caretaker/tickets`, `GET, POST, PATCH /caretaker/tickets/{id}...` | caretaker, on assigned properties only; re-checked on every call |
+| Listings | `GET /listings`, `POST /units/{id}/listing`, `GET, PUT /listings/{id}`, `POST /listings/{id}/close`, photos, `PATCH /listings/{id}/enquiries/{enquiryId}`; public `GET /public/listings/{slug}`, `POST /public/listings/{slug}/enquiries` | landlord; public page and enquiries throttled per address, street address never public |
 | Receipts | `GET /leases/{id}/receipts`, `GET /receipts/{id}/pdf` | both parties |
 | Maintenance | `GET /tickets?propertyId=&open=`, `POST /tickets` (tenant), `GET /tickets/{id}` (the thread), `POST /tickets/{id}/events`, `PATCH /tickets/{id}/status` | both, scoped; the landlord moves a request forward, the tenant closes or reopens it |
 | Uploads | `POST /uploads` (presigned PUT), `POST /documents/{id}/complete`, `GET /documents/{id}/download` | lease parties, visibility-gated |

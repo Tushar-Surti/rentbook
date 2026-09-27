@@ -20,9 +20,10 @@ import { usePhotoUploads } from './usePhotoUploads'
  * One request's thread: a single ruled page both people write on, oldest first. Status changes are
  * written into it as lines of their own, photos are pinned in as prints, and it updates live for both.
  */
-export function Thread({ ticketId, viewer }: { ticketId: string; viewer: Role }) {
+/** {@code base} is "/caretaker" when a caretaker reads it; they write as the landlord's side, without photos. */
+export function Thread({ ticketId, viewer, base = '' }: { ticketId: string; viewer: Role; base?: string }) {
   const queryClient = useQueryClient()
-  const thread = useQuery(threadQuery(ticketId))
+  const thread = useQuery(threadQuery(ticketId, base))
   useLive(`/topic/tickets/${ticketId}`, () => {
     void queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
     void queryClient.invalidateQueries({ queryKey: ['tickets'] })
@@ -33,8 +34,8 @@ export function Thread({ ticketId, viewer }: { ticketId: string; viewer: Role })
     return (
       <div className={styles.missing}>
         <h1 className={styles.title}>This request isn't in your book</h1>
-        <Link to={viewer === 'LANDLORD' ? '/l' : '/t/requests'}>
-          {viewer === 'LANDLORD' ? 'Open your book' : 'See your requests'}
+        <Link to={viewer === 'TENANT' ? '/t/requests' : viewer === 'CARETAKER' ? '/c' : '/l'}>
+          {viewer === 'TENANT' ? 'See your requests' : 'Open the book'}
         </Link>
       </div>
     )
@@ -42,7 +43,7 @@ export function Thread({ ticketId, viewer }: { ticketId: string; viewer: Role })
 
   const { ticket, events, nextStatuses } = thread.data
   const unit = ticket.unit.roomLabel ? `${ticket.unit.label}, ${ticket.unit.roomLabel}` : ticket.unit.label
-  const other = viewer === 'LANDLORD' ? ticket.tenant : ticket.landlord
+  const other = viewer !== 'TENANT' ? ticket.tenant : ticket.landlord
 
   return (
     <article className={styles.thread} aria-labelledby="request-title">
@@ -52,7 +53,7 @@ export function Thread({ ticketId, viewer }: { ticketId: string; viewer: Role })
         </h1>
         <p className={styles.where}>
           {unit}, {ticket.property.name}.{' '}
-          {viewer === 'LANDLORD' ? `Reported by ${ticket.tenant.fullName}` : 'Reported'} on{' '}
+          {viewer !== 'TENANT' ? `Reported by ${ticket.tenant.fullName}` : 'Reported'} on{' '}
           {formatInstantDate(ticket.openedAt)}.
         </p>
         <p className={styles.marks}>
@@ -68,7 +69,7 @@ export function Thread({ ticketId, viewer }: { ticketId: string; viewer: Role })
         ))}
       </ol>
 
-      {nextStatuses.length > 0 && <StatusActions ticketId={ticketId} nextStatuses={nextStatuses} />}
+      {nextStatuses.length > 0 && <StatusActions ticketId={ticketId} nextStatuses={nextStatuses} base={base} />}
 
       {ticket.status === 'CLOSED' ? (
         <p className={styles.closed}>
@@ -77,7 +78,7 @@ export function Thread({ ticketId, viewer }: { ticketId: string; viewer: Role })
             : `This request is closed. ${firstName(ticket.tenant.fullName)} can reopen it.`}
         </p>
       ) : (
-        <Reply ticketId={ticketId} leaseId={ticket.leaseId} />
+        <Reply ticketId={ticketId} leaseId={ticket.leaseId} base={base} photos={viewer !== 'CARETAKER'} />
       )}
     </article>
   )
@@ -118,11 +119,11 @@ function Line({ event }: { event: TicketEvent }) {
   )
 }
 
-function StatusActions({ ticketId, nextStatuses }: { ticketId: string; nextStatuses: TicketStatus[] }) {
+function StatusActions({ ticketId, nextStatuses, base }: { ticketId: string; nextStatuses: TicketStatus[]; base: string }) {
   const queryClient = useQueryClient()
   const move = useMutation({
     mutationFn: (status: TicketStatus) =>
-      api<TicketThread>(`/tickets/${ticketId}/status`, { method: 'PATCH', json: { status } }),
+      api<TicketThread>(`${base}/tickets/${ticketId}/status`, { method: 'PATCH', json: { status } }),
     onSuccess: (thread) => {
       queryClient.setQueryData(['ticket', ticketId], thread)
       void queryClient.invalidateQueries({ queryKey: ['tickets'] })
@@ -150,7 +151,12 @@ function StatusActions({ ticketId, nextStatuses }: { ticketId: string; nextStatu
   )
 }
 
-function Reply({ ticketId, leaseId }: { ticketId: string; leaseId: string }) {
+function Reply({ ticketId, leaseId, base, photos: withPhotos }: {
+  ticketId: string
+  leaseId: string
+  base: string
+  photos: boolean
+}) {
   const queryClient = useQueryClient()
   const photos = usePhotoUploads(leaseId)
   const [body, setBody] = useState('')
@@ -170,7 +176,10 @@ function Reply({ ticketId, leaseId }: { ticketId: string; leaseId: string }) {
     setSending(true)
     setError(undefined)
     try {
-      await api(`/tickets/${ticketId}/events`, { method: 'POST', json: { body, photoIds: photos.ids } })
+      await api(`${base}/tickets/${ticketId}/events`, {
+        method: 'POST',
+        json: withPhotos ? { body, photoIds: photos.ids } : { body },
+      })
       setBody('')
       photos.clear()
       await queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
@@ -185,7 +194,7 @@ function Reply({ ticketId, leaseId }: { ticketId: string; leaseId: string }) {
     <form className={styles.reply} onSubmit={(event) => void send(event)} noValidate>
       <FormError>{error}</FormError>
       <TextAreaField label="Add to the thread" rows={3} value={body} onChange={(event) => setBody(event.target.value)} />
-      <PhotoPicker photos={photos} />
+      {withPhotos && <PhotoPicker photos={photos} />}
       <div>
         <Button type="submit" busy={sending}>
           Send

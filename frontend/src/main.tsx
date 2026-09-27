@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
-import { StrictMode, useEffect } from 'react'
+import { StrictMode, useEffect, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'
 import { ApiError } from './api/client'
@@ -18,12 +18,20 @@ const queryClient = new QueryClient({
   },
 })
 
-/** Nothing cached for one person may be shown to the next person who signs in on this device. */
+/**
+ * Nothing cached for one person may be shown to the next person who signs in on this device. Only an
+ * actual sign-out clears the cache: a visitor who was never signed in keeps what public pages have loaded.
+ */
 function ForgetOnSignOut() {
   const { state } = useAuth()
   const client = useQueryClient()
+  const wasSignedIn = useRef(false)
   useEffect(() => {
-    if (state.status === 'signed-out') client.clear()
+    if (state.status === 'signed-in') wasSignedIn.current = true
+    if (state.status === 'signed-out' && wasSignedIn.current) {
+      wasSignedIn.current = false
+      client.clear()
+    }
   }, [state.status, client])
   return null
 }

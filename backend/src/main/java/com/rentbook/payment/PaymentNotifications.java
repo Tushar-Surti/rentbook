@@ -12,6 +12,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /** What happens after a payment is confirmed or fails, once that has committed. */
 @Component
@@ -56,7 +57,8 @@ class PaymentNotifications {
             String amount = Rupees.format(confirmed.amountPaise());
             String link = rentbook.appBaseUrl().toString().replaceAll("/+$", "") + "/t/rent";
             if (confirmed.method() != Payment.Method.RAZORPAY) {
-                String landlord = users.findById(confirmed.landlordId()).map(User::getFullName).orElse("Your landlord");
+                UUID recorder = confirmed.recordedBy() == null ? confirmed.landlordId() : confirmed.recordedBy();
+                String landlord = users.findById(recorder).map(User::getFullName).orElse("Your landlord");
                 notifier.send(tenant.getId(), Notifier.Channel.EMAIL, "payment.receipt",
                         "receipt:" + confirmed.receiptId() + ":email", tenant.getEmail(), new Notifier.Message(
                                 "Payment of " + amount + " recorded, receipt " + confirmed.receiptNumber(),

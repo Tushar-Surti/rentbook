@@ -14,6 +14,10 @@ public final class CurrentUser {
         return UUID.fromString(jwt.getSubject());
     }
 
+    public static boolean isCaretaker(Jwt jwt) {
+        return "CARETAKER".equals(jwt.getClaimAsString("role"));
+    }
+
     public static boolean isLandlord(Jwt jwt) {
         return "LANDLORD".equals(jwt.getClaimAsString("role"));
     }

@@ -1,7 +1,9 @@
 package com.rentbook.realtime;
 
+import com.rentbook.caretaker.CaretakerWork;
 import com.rentbook.lease.LeaseService;
 import com.rentbook.maintenance.TicketService;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessagingException;
@@ -34,13 +36,16 @@ class StompAuthInterceptor implements ChannelInterceptor {
     private final JwtAuthenticationConverter converter;
     private final LeaseService leases;
     private final TicketService tickets;
+    // Looked up when a caretaker subscribes, not at startup: the broker is configured before the services exist.
+    private final ObjectProvider<CaretakerWork> caretakers;
 
     StompAuthInterceptor(JwtDecoder jwtDecoder, JwtAuthenticationConverter converter, LeaseService leases,
-                         TicketService tickets) {
+                         TicketService tickets, ObjectProvider<CaretakerWork> caretakers) {
         this.jwtDecoder = jwtDecoder;
         this.converter = converter;
         this.leases = leases;
         this.tickets = tickets;
+        this.caretakers = caretakers;
     }
 
     @Override
@@ -81,11 +86,17 @@ class StompAuthInterceptor implements ChannelInterceptor {
         if (destination != null) {
             UUID userId = UUID.fromString(user.getName());
             Matcher lease = LEASE_TOPIC.matcher(destination);
-            if (lease.matches() && leases.isParty(UUID.fromString(lease.group(1)), userId)) {
+            boolean caretaker = user.getAuthorities().stream()
+                    .anyMatch(authority -> "ROLE_CARETAKER".equals(authority.getAuthority()));
+            if (lease.matches() && (caretaker
+                    ? caretakers.getObject().canWatchLease(userId, UUID.fromString(lease.group(1)))
+                    : leases.isParty(UUID.fromString(lease.group(1)), userId))) {
                 return;
             }
             Matcher ticket = TICKET_TOPIC.matcher(destination);
-            if (ticket.matches() && tickets.isParty(UUID.fromString(ticket.group(1)), userId)) {
+            if (ticket.matches() && (caretaker
+                    ? caretakers.getObject().canWatchTicket(userId, UUID.fromString(ticket.group(1)))
+                    : tickets.isParty(UUID.fromString(ticket.group(1)), userId))) {
                 return;
             }
         }

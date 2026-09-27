@@ -51,10 +51,14 @@ public class RecordedPayments {
     }
 
     @Transactional
-    public Recorded record(UUID landlordId, UUID leaseId, Collection<UUID> chargeIds, Payment.Method method,
-                    LocalDate receivedOn, String note) {
+    /** {@code recordedBy} is who took the money: the landlord, or a caretaker working for them. */
+    public Recorded record(UUID landlordId, UUID recordedBy, UUID leaseId, Collection<UUID> chargeIds,
+                           Payment.Method method, LocalDate receivedOn, String note) {
         if (method == Payment.Method.RAZORPAY) {
             throw ApiException.badRequest("wrong_method", "Online payments are recorded when Razorpay confirms them.");
+        }
+        if (method == Payment.Method.DEPOSIT) {
+            throw ApiException.badRequest("wrong_method", "Charges are paid from the deposit when both agree its settlement.");
         }
         Lease lease = leases.require(leaseId, landlordId, Role.LANDLORD);
         if (receivedOn.isAfter(ledger.today())) {
@@ -85,12 +89,12 @@ public class RecordedPayments {
 
         long amount = selected.stream().mapToLong(Charge::getAmountPaise).sum();
         String cleanNote = note == null || note.isBlank() ? null : note.strip();
-        Payment payment = payments.save(Payment.recordedByLandlord(leaseId, lease.getTenantId(), landlordId, amount,
+        Payment payment = payments.save(Payment.recordedByLandlord(leaseId, lease.getTenantId(), landlordId, recordedBy, amount,
                 ids, method, receivedOn, cleanNote, now));
         selected.forEach(charge -> charge.markPaid(now));
         Receipt receipt = receipts.issue(payment);
         events.publishEvent(new PaymentConfirmation.PaymentConfirmed(payment.getId(), leaseId, lease.getTenantId(),
-                landlordId, amount, receipt.getId(), receipt.number(), method));
+                landlordId, amount, receipt.getId(), receipt.number(), method, recordedBy));
         return new Recorded(payment.getId(), receipt.getId(), receipt.number(), amount);
     }
 }

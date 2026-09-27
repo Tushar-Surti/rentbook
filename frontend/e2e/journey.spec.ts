@@ -178,6 +178,9 @@ test('a landlord invites a tenant to a PG bed, the tenant moves in, and both rea
   await page.getByLabel("Tenant's email").fill(tenantEmail)
   await page.getByLabel("Tenant's mobile (optional)").fill('9812345678')
   await page.getByLabel('Deposit').fill('25000')
+  // Rent falls due on the move-in day, so next month's rent is never already on the slip, whatever the date.
+  const moveInDay = Math.min(Number(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }).slice(8)), 28)
+  await page.getByLabel('Rent due on').selectOption(String(moveInDay))
   await expect(page.getByRole('heading', { name: 'What Asha Rao will see' })).toBeVisible()
   await capture(page, testInfo, 'invite-form')
   await expectAccessible(page)

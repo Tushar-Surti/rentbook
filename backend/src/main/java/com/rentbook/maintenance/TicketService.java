@@ -163,6 +163,45 @@ public class TicketService {
         return thread(ticket, userId, role);
     }
 
+    /** A request in the landlord's book, read by someone working for them; the caller checks the property. */
+    @Transactional(readOnly = true)
+    public Thread threadOnBehalf(UUID ticketId, UUID landlordId) {
+        return thread(require(ticketId, landlordId, Role.LANDLORD), landlordId, Role.LANDLORD);
+    }
+
+    /** A message written by the landlord's caretaker ({@code authorId}), with the landlord's authority. */
+    @Transactional
+    public EventView postOnBehalf(UUID ticketId, UUID landlordId, UUID authorId, String body) {
+        Ticket ticket = require(ticketId, landlordId, Role.LANDLORD);
+        if (ticket.getStatus() == CLOSED) {
+            throw ApiException.conflict("ticket_closed", "This request is closed. The tenant can reopen it.");
+        }
+        if (body == null || body.isBlank()) {
+            throw ApiException.badRequest("empty_message", "Write something first.");
+        }
+        Instant at = next(ticket);
+        TicketEvent event = events.save(TicketEvent.message(ticket.getId(), authorId, body.strip(), at));
+        ticket.touch(at);
+        publish(ticket, authorId, "message");
+        return eventViews(List.of(event)).getFirst();
+    }
+
+    /** A status move made by the landlord's caretaker, with the landlord's moves. */
+    @Transactional
+    public Thread moveOnBehalf(UUID ticketId, UUID landlordId, UUID actorId, Ticket.Status to) {
+        Ticket ticket = require(ticketId, landlordId, Role.LANDLORD);
+        Ticket.Status from = ticket.getStatus();
+        if (!movesFor(Role.LANDLORD, from).contains(to)) {
+            throw ApiException.conflict("status_change",
+                    "A request moves forward: acknowledged, in progress, then resolved. The tenant closes or reopens it.");
+        }
+        Instant at = next(ticket);
+        ticket.move(to, at);
+        events.save(TicketEvent.statusChange(ticket.getId(), actorId, from, to, at));
+        publish(ticket, actorId, "status");
+        return thread(ticket, landlordId, Role.LANDLORD);
+    }
+
     /** For live subscriptions: only the request's landlord and tenant may listen to it. */
     @Transactional(readOnly = true)
     public boolean isParty(UUID ticketId, UUID userId) {

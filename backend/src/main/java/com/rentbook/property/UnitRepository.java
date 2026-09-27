@@ -15,6 +15,8 @@ public interface UnitRepository extends JpaRepository<Unit, UUID> {
 
     boolean existsByParentUnitId(UUID parentUnitId);
 
+    long countByParentUnitId(UUID parentUnitId);
+
     @Query("""
             select u from Unit u
             where u.id = :unitId

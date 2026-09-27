@@ -12,6 +12,7 @@ import { FileDocument } from '../documents/FileDocument'
 import { vaultQuery } from '../documents/queries'
 import { ReceiptTable } from '../receipts/ReceiptTable'
 import { receiptsQuery } from '../receipts/receipts'
+import { LandlordDeposit } from '../deposit/LandlordDeposit'
 import { AddChargeForm } from './AddChargeForm'
 import { EndLeaseForm } from './EndLeaseForm'
 import { RecordPaymentForm } from './RecordPaymentForm'
@@ -113,6 +114,15 @@ export function LeasePage() {
           <SessionLoading />
         )}
       </section>
+
+      {view.status !== 'ACTIVE' && (
+        <section className={styles.section} aria-labelledby="deposit-heading">
+          <h2 id="deposit-heading" className={styles.sectionHeading}>
+            Security deposit
+          </h2>
+          <LandlordDeposit lease={view} />
+        </section>
+      )}
 
       <section className={styles.section} aria-labelledby="receipts-heading">
         <h2 id="receipts-heading" className={styles.sectionHeading}>

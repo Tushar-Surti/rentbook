@@ -92,7 +92,7 @@ public class StorageService {
     }
 
     /** A PUT the browser makes itself. The content type is signed, so the file must arrive as declared. */
-    SignedRequest presignUpload(String key, String contentType) {
+    public SignedRequest presignUpload(String key, String contentType) {
         PresignedPutObjectRequest presigned = presigner.presignPutObject(request -> request
                 .signatureDuration(UPLOAD_WINDOW)
                 .putObjectRequest(put -> put.bucket(properties.bucket()).key(key).contentType(contentType)));
@@ -105,7 +105,7 @@ public class StorageService {
         return new SignedRequest(presigned.url().toString(), headers, presigned.expiration());
     }
 
-    SignedRequest presignDownload(String key, String filename, String contentType, boolean inline) {
+    public SignedRequest presignDownload(String key, String filename, String contentType, boolean inline) {
         String disposition = (inline ? "inline" : "attachment") + "; filename=\""
                 + filename.replaceAll("[\"\\\\\\r\\n]", "_") + "\"";
         PresignedGetObjectRequest presigned = presigner.presignGetObject(request -> request
@@ -116,7 +116,7 @@ public class StorageService {
         return new SignedRequest(presigned.url().toString(), Map.of(), presigned.expiration());
     }
 
-    Optional<StoredObject> head(String key) {
+    public Optional<StoredObject> head(String key) {
         try {
             HeadObjectResponse head = client.headObject(request -> request.bucket(properties.bucket()).key(key));
             return Optional.of(new StoredObject(head.contentLength(), head.contentType()));
@@ -130,7 +130,7 @@ public class StorageService {
         }
     }
 
-    void delete(String key) {
+    public void delete(String key) {
         client.deleteObject(request -> request.bucket(properties.bucket()).key(key));
     }
 

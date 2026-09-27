@@ -69,10 +69,9 @@ type RequestOptions = Omit<RequestInit, 'body'> & { json?: unknown }
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const response = await request(path, options, 'application/json')
-  if (response.status === 204) {
-    return undefined as T
-  }
-  return (await response.json()) as T
+  // 204, or a 202 that only says "received": no body to read.
+  const text = response.status === 204 ? '' : await response.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 /** A file from the API, such as a receipt PDF, fetched with the same session as every other call. */

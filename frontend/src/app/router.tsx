@@ -27,6 +27,40 @@ export const router = createBrowserRouter([
       { path: '/register', element: <GuestOnly><RegisterPage /></GuestOnly> },
       { path: '/forgot-password', element: <GuestOnly><ForgotPasswordPage /></GuestOnly> },
       { path: '/invite/:token', element: <AcceptInvitePage /> },
+      { path: '/r/:slug', lazy: screen(() => import('../listings/PublicListingPage'), (m) => m.PublicListingPage) },
+      {
+        path: '/caretaker-invite/:token',
+        lazy: screen(() => import('../caretaker/CaretakerAcceptPage'), (m) => m.CaretakerAcceptPage),
+      },
+      {
+        path: '/c',
+        lazy: async () => {
+          const { CaretakerLayout } = await import('../caretaker/CaretakerLayout')
+          return {
+            Component: () => (
+              <RequireRole role="CARETAKER">
+                <CaretakerLayout />
+              </RequireRole>
+            ),
+          }
+        },
+        children: [
+          { index: true, lazy: screen(() => import('../caretaker/CaretakerLayout'), (m) => m.CaretakerIndex) },
+          { path: 'p/:propertyId', lazy: screen(() => import('../caretaker/CaretakerPages'), (m) => m.CaretakerBookPage) },
+          {
+            path: 'p/:propertyId/leases/:leaseId',
+            lazy: screen(() => import('../caretaker/CaretakerPages'), (m) => m.CaretakerLeasePage),
+          },
+          {
+            path: 'p/:propertyId/requests/:ticketId',
+            lazy: screen(() => import('../caretaker/CaretakerPages'), (m) => m.CaretakerRequestPage),
+          },
+          {
+            path: 'requests/:ticketId',
+            lazy: screen(() => import('../caretaker/CaretakerPages'), (m) => m.CaretakerRequestPage),
+          },
+        ],
+      },
       {
         path: '/l',
         element: <RequireRole role="LANDLORD"><LandlordLayout /></RequireRole>,
@@ -34,6 +68,13 @@ export const router = createBrowserRouter([
           { index: true, lazy: screen(() => import('../landlord/BookIndex'), (m) => m.BookIndex) },
           { path: 'properties/new', lazy: screen(() => import('../landlord/NewPropertyPage'), (m) => m.NewPropertyPage) },
           { path: 'payouts', lazy: screen(() => import('../landlord/PayoutsPage'), (m) => m.PayoutsPage) },
+          { path: 'caretakers', lazy: screen(() => import('../landlord/CaretakersPage'), (m) => m.CaretakersPage) },
+          { path: 'listings', lazy: screen(() => import('../listings/ListingsPage'), (m) => m.ListingsPage) },
+          { path: 'listings/:listingId', lazy: screen(() => import('../listings/ListingsPage'), (m) => m.ListingPage) },
+          {
+            path: 'p/:propertyId/units/:unitId/list',
+            lazy: screen(() => import('../listings/ListingsPage'), (m) => m.NewListingPage),
+          },
           { path: 'p/:propertyId', lazy: screen(() => import('../landlord/BookPage'), (m) => m.BookPage) },
           // Nested under the property so its index tab stays marked.
           {

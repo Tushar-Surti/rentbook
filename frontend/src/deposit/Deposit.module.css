@@ -1,0 +1,166 @@
+/* The deposit's account: ruled lines, a 2px rule over the list, a double rule over what comes back. */
+.statement {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.account {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 2px solid var(--graphite);
+}
+
+.account th,
+.account td {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: baseline;
+}
+
+.account th {
+  text-align: left;
+  font-weight: 600;
+}
+
+.account td {
+  text-align: right;
+  white-space: nowrap;
+  font-stretch: var(--width-register);
+  font-size: var(--text-lg);
+}
+
+.deduction {
+  display: grid;
+  font-weight: 400;
+}
+
+.account .deduction {
+  font-weight: 400;
+}
+
+.fromBook {
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+}
+
+.account tfoot th,
+.account tfoot td {
+  border-top: 3px double var(--graphite);
+  border-bottom: 0;
+  padding-top: var(--space-4);
+}
+
+.refund {
+  font-weight: 700;
+}
+
+.note {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.noteBy {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.refunded {
+  font-weight: 600;
+}
+
+.status {
+  font-weight: 600;
+}
+
+/* The landlord's form. */
+.form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.fieldset {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0 0 var(--space-2);
+  font-weight: 600;
+}
+
+.check {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap);
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+}
+
+.check input {
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: var(--carbon);
+}
+
+.lines {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.summary {
+  display: grid;
+  margin: 0;
+  border-top: 2px solid var(--graphite);
+}
+
+.summary > div {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.summary dt {
+  font-weight: 600;
+}
+
+.summary dd {
+  margin: 0;
+  font-stretch: var(--width-register);
+  font-size: var(--text-lg);
+}
+
+.summary > div:last-child {
+  border-top: 3px double var(--graphite);
+  border-bottom: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.hint {
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+}
+
+@media (min-width: 40rem) {
+  .line {
+    grid-template-columns: 1fr 10rem auto;
+  }
+}

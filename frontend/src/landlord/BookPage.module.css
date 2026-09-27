@@ -305,3 +305,50 @@
     display: none;
   }
 }
+
+/* Move-outs whose deposit is still held: ruled lines, each opening its lease. */
+.deposits {
+  display: grid;
+  max-width: 52rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 2px solid var(--graphite);
+}
+
+.deposits li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-1) var(--space-4);
+  align-items: baseline;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.deposits a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-weight: 600;
+}
+
+.depositUnit {
+  grid-column: 1;
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+}
+
+.depositState {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+@media (min-width: 40rem) {
+  .deposits li {
+    grid-template-columns: 1fr 1.4fr auto 11rem;
+  }
+
+  .depositUnit {
+    grid-column: auto;
+  }
+}

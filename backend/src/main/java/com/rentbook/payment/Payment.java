@@ -36,7 +36,9 @@ public class Payment extends BaseEntity {
         CASH("in cash"),
         UPI("by UPI"),
         BANK_TRANSFER("by bank transfer"),
-        CHEQUE("by cheque");
+        CHEQUE("by cheque"),
+        /** Settled from the tenant's security deposit, as both agreed at move-out. */
+        DEPOSIT("from the security deposit");
 
         private final String phrase;
 
@@ -122,15 +124,18 @@ public class Payment extends BaseEntity {
         this.chargeIds.addAll(chargeIds);
     }
 
-    /** Money the landlord says they received themselves: paid in full to them, and captured at once. */
-    static Payment recordedByLandlord(UUID leaseId, UUID tenantId, UUID landlordId, long amountPaise,
+    /**
+     * Money the landlord's side says was received (by the landlord, or by their caretaker, {@code recordedBy}):
+     * paid in full to the landlord, and captured at once.
+     */
+    static Payment recordedByLandlord(UUID leaseId, UUID tenantId, UUID landlordId, UUID recordedBy, long amountPaise,
                                       Collection<UUID> chargeIds, Method method, LocalDate receivedOn, String note,
                                       Instant now) {
         Payment payment = new Payment(leaseId, tenantId, landlordId, amountPaise, 0, chargeIds);
         payment.method = method;
         payment.receivedOn = receivedOn;
         payment.note = note;
-        payment.recordedBy = landlordId;
+        payment.recordedBy = recordedBy;
         payment.status = Status.CAPTURED;
         payment.capturedAt = now;
         return payment;
@@ -226,6 +231,10 @@ public class Payment extends BaseEntity {
 
     public boolean isRecordedByLandlord() {
         return method != Method.RAZORPAY;
+    }
+
+    public UUID getRecordedBy() {
+        return recordedBy;
     }
 
     public LocalDate getReceivedOn() {

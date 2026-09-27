@@ -15,6 +15,7 @@ type AuthContextValue = {
   sendPasswordResetCode: (email: string) => Promise<unknown>
   resetPassword: (input: { email: string; code: string; password: string }) => Promise<unknown>
   acceptInvite: (token: string, input: AcceptInput) => Promise<unknown>
+  acceptCaretakerInvite: (token: string, input: { fullName?: string; password: string }) => Promise<unknown>
   logout: () => Promise<unknown>
 }
 
@@ -45,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         api<SessionResponse>('/auth/password/reset', { method: 'POST', json: input }).then(setSession),
       acceptInvite: (token, input) =>
         api<SessionResponse>(`/invites/${encodeURIComponent(token)}/accept`, { method: 'POST', json: input }).then(
+          setSession,
+        ),
+      acceptCaretakerInvite: (token, input) =>
+        api<SessionResponse>(`/caretaker-invites/${encodeURIComponent(token)}/accept`, { method: 'POST', json: input }).then(
           setSession,
         ),
       logout: () => api<void>('/auth/logout', { method: 'POST' }).finally(() => setSession(null)),

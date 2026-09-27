@@ -50,6 +50,11 @@ public class User extends BaseEntity {
         return email.strip().toLowerCase(Locale.ROOT);
     }
 
+    /** A removed caretaker: the account stays for the record but can no longer sign in. */
+    public void disable() {
+        this.status = Status.DISABLED;
+    }
+
     public boolean isActive() {
         return status == Status.ACTIVE;
     }

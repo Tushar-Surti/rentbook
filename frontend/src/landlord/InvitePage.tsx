@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { api, ApiError } from '../api/client'
 import type { IssuedInvite } from '../api/types'
@@ -109,14 +109,16 @@ function InviteForm({ unitId, unitName, propertyName, back, defaultRentPaise, on
 }) {
   const queryClient = useQueryClient()
   const [formError, setFormError] = useState<string>()
+  // Opened from a listing's enquiry: the enquirer's details and the listed terms come along.
+  const [params] = useSearchParams()
   const { register, handleSubmit, formState, watch, setError } = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
-      tenantName: '',
-      email: '',
-      phone: '',
-      rent: defaultRentPaise ? String(defaultRentPaise / 100) : '',
-      deposit: '',
+      tenantName: params.get('name') ?? '',
+      email: params.get('email') ?? '',
+      phone: (params.get('phone') ?? '').replace(/\D/g, '').slice(-10),
+      rent: params.get('rent') ?? (defaultRentPaise ? String(defaultRentPaise / 100) : ''),
+      deposit: params.get('deposit') ?? '',
       dueDay: '5',
       startsOn: todayIso(),
       endsOn: '',

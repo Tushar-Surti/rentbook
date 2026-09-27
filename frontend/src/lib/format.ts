@@ -113,6 +113,8 @@ export function methodPhrase(method: string): string {
       return 'by bank transfer'
     case 'CHEQUE':
       return 'by cheque'
+    case 'DEPOSIT':
+      return 'from the deposit'
     default:
       return 'online'
   }

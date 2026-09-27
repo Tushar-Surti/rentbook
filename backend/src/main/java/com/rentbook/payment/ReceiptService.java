@@ -11,6 +11,7 @@ import com.rentbook.property.PropertyRepository;
 import com.rentbook.user.LandlordProfile;
 import com.rentbook.user.LandlordProfileRepository;
 import com.rentbook.user.Role;
+import com.rentbook.user.UserRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,11 +43,12 @@ public class ReceiptService {
     private final PropertyRepository properties;
     private final LandlordProfileRepository landlordProfiles;
     private final ReceiptPdfRenderer renderer;
+    private final UserRepository users;
     private final Clock clock;
 
     ReceiptService(JdbcTemplate jdbc, ReceiptRepository receipts, PaymentRepository payments, ChargeRepository charges,
                    LeaseService leases, PropertyRepository properties, LandlordProfileRepository landlordProfiles,
-                   ReceiptPdfRenderer renderer, Clock clock) {
+                   ReceiptPdfRenderer renderer, UserRepository users, Clock clock) {
         this.jdbc = jdbc;
         this.receipts = receipts;
         this.payments = payments;
@@ -55,6 +57,7 @@ public class ReceiptService {
         this.properties = properties;
         this.landlordProfiles = landlordProfiles;
         this.renderer = renderer;
+        this.users = users;
         this.clock = clock;
     }
 
@@ -127,15 +130,23 @@ public class ReceiptService {
     }
 
     /** How the money was received, as the receipt states it. */
-    private static String proof(Payment payment) {
+    private String proof(Payment payment) {
         String at = MOMENT.format(payment.getCapturedAt().atZone(IndiaTime.ZONE));
         if (!payment.isRecordedByLandlord()) {
             return "Received online through Razorpay (payment " + payment.getRzpPaymentId()
                     + "), confirmed by Razorpay's signed notification on " + at + ".";
         }
+        if (payment.getMethod() == Payment.Method.DEPOSIT) {
+            return "Paid from the security deposit the landlord held, as both agreed in the deposit settlement on "
+                    + DAY.format(payment.getReceivedOn()) + ".";
+        }
         String note = payment.getNote() == null || payment.getNote().isBlank() ? "" : " (" + payment.getNote().strip() + ")";
+        String by = payment.getRecordedBy() == null || payment.getRecordedBy().equals(payment.getLandlordId())
+                ? "the landlord"
+                : users.findById(payment.getRecordedBy()).map(user -> user.getFullName() + ", the landlord's caretaker,")
+                        .orElse("the landlord's caretaker");
         return "Received " + payment.getMethod().phrase() + " on " + DAY.format(payment.getReceivedOn()) + note
-                + ". Recorded by the landlord on " + at + ".";
+                + ". Recorded by " + by + " on " + at + ".";
     }
 
     /** The full address of the home, as an HRA claim asks for it: unit, building, street, city and PIN. */

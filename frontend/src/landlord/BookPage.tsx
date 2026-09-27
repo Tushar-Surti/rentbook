@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { api, ApiError } from '../api/client'
-import type { Hook, IssuedInvite, Property, PropertyBoard, Unit } from '../api/types'
+import type { DepositStatus, Hook, IssuedInvite, Property, PropertyBoard, Unit } from '../api/types'
 import { SessionLoading } from '../app/guards'
 import { Button, LinkButton } from '../design/Button'
 import { Mark } from '../design/Mark'
@@ -16,6 +16,14 @@ import { boardQuery, propertyQuery } from './queries'
 import { ShareLink } from './ShareLink'
 
 const KIND_NAMES: Record<Property['kind'], string> = { PG: 'PG', APARTMENT: 'Apartment building', HOUSE: 'House' }
+
+const DEPOSIT_STATE: Record<DepositStatus | 'NONE', string> = {
+  NONE: 'To settle',
+  PROPOSED: 'Sent, waiting',
+  QUERIED: 'Has a question',
+  ACCEPTED: 'Agreed, refund to record',
+  SETTLED: 'Settled',
+}
 
 /** One property's page in the book: the month's register of every unit it lets, and what to add next. */
 export function BookPage() {
@@ -38,6 +46,7 @@ export function BookPage() {
   const page = board.data?.properties.find((entry) => entry.id === propertyId)
   const units = new Map(property.data.units.map((unit) => [unit.id, unit]))
   const openRequests = requests.data?.length ?? 0
+  const deposits = board.data?.deposits.filter((due) => due.propertyId === propertyId) ?? []
 
   return (
     <div className={styles.book}>
@@ -82,6 +91,29 @@ export function BookPage() {
         )}
       </section>
 
+      {deposits.length > 0 && (
+        <section className={styles.needs} aria-labelledby="deposits-heading">
+          <h2 id="deposits-heading" className={styles.sectionHeading}>
+            Deposits to settle
+          </h2>
+          <ul className={styles.deposits}>
+            {deposits.map((due) => (
+              <li key={due.leaseId}>
+                <Link to={`/l/p/${propertyId}/leases/${due.leaseId}`} className="entry">
+                  {due.tenantName}
+                </Link>
+                <span className={styles.depositUnit}>
+                  {due.roomLabel ? `${due.unitLabel}, ${due.roomLabel}` : due.unitLabel}
+                  {due.lastDay && `, last day ${formatDayMonth(due.lastDay)}`}
+                </span>
+                <span className="entry num">{rupees(due.heldPaise)}</span>
+                <span className={styles.depositState}>{DEPOSIT_STATE[due.status ?? 'NONE']}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {requests.data && requests.data.length > 0 && (
         <section id="needs-you" className={styles.needs} aria-labelledby="needs-heading">
           <h2 id="needs-heading" className={styles.sectionHeading}>
@@ -109,11 +141,17 @@ export function BookPage() {
   )
 }
 
-function Register({ page, month, units, onIssued }: {
+/**
+ * The month's register of one property. {@code base} is the book it sits in ("/l" for the landlord, "/c" for
+ * a caretaker); {@code readOnly} leaves out inviting, which is the landlord's alone.
+ */
+export function Register({ page, month, units, onIssued, base = '/l', readOnly = false }: {
   page: PropertyBoard
   month: string
   units: Map<string, Unit>
-  onIssued: (issued: IssuedInvite) => void
+  onIssued?: (issued: IssuedInvite) => void
+  base?: string
+  readOnly?: boolean
 }) {
   // Natural order, so Room 9 comes before Room 10 and every room's beds read A, B, C.
   const byLabel = (a: { label: string }, b: { label: string }) =>
@@ -137,7 +175,15 @@ function Register({ page, month, units, onIssued }: {
   const collected = billed.reduce((sum, rent) => sum + (rent?.status === 'PAID' ? rent.amountPaise : 0), 0)
   const monthName = month ? monthLabel(month) : 'this month'
   const row = (hook: Hook) => (
-    <HookRow key={hook.unitId} hook={hook} unit={units.get(hook.unitId)} propertyId={page.id} onIssued={onIssued} />
+    <HookRow
+      key={hook.unitId}
+      hook={hook}
+      unit={units.get(hook.unitId)}
+      propertyId={page.id}
+      onIssued={onIssued ?? (() => undefined)}
+      base={base}
+      readOnly={readOnly}
+    />
   )
 
   return (
@@ -217,11 +263,13 @@ function RentStatus({ occupant }: { occupant: NonNullable<Hook['occupant']> }) {
   }
 }
 
-function HookRow({ hook, unit, propertyId, onIssued }: {
+function HookRow({ hook, unit, propertyId, onIssued, base, readOnly }: {
   hook: Hook
   unit?: Unit
   propertyId: string
   onIssued: (issued: IssuedInvite) => void
+  base: string
+  readOnly: boolean
 }) {
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
@@ -239,14 +287,14 @@ function HookRow({ hook, unit, propertyId, onIssued }: {
     onSuccess: () => void refresh(),
   })
   const failure = resend.error ?? revoke.error
-  const open = !hook.occupant && !hook.invite && hook.status === 'VACANT'
+  const open = !readOnly && !hook.occupant && !hook.invite && hook.status === 'VACANT'
 
   return (
     <tr>
       <td className={styles.unitCell}>{hook.label}</td>
       <td className={styles.tenantCell}>
         {hook.occupant ? (
-          <Link to={`/l/p/${propertyId}/leases/${hook.occupant.leaseId}`} className="entry">
+          <Link to={`${base}/p/${propertyId}/leases/${hook.occupant.leaseId}`} className="entry">
             {hook.occupant.tenantName}
           </Link>
         ) : hook.invite ? (
@@ -275,11 +323,22 @@ function HookRow({ hook, unit, propertyId, onIssued }: {
       </td>
       <td className={styles.actionCell}>
         {open && (
-          <LinkButton to={`/l/p/${propertyId}/units/${hook.unitId}/invite`} variant="quiet" className={styles.rowAction}>
-            Invite a tenant
-          </LinkButton>
+          <span className={styles.inviteActions}>
+            <LinkButton to={`/l/p/${propertyId}/units/${hook.unitId}/invite`} variant="quiet" className={styles.rowAction}>
+              Invite a tenant
+            </LinkButton>
+            {hook.listingId ? (
+              <LinkButton to={`/l/listings/${hook.listingId}`} variant="quiet" className={styles.rowAction}>
+                Listed
+              </LinkButton>
+            ) : (
+              <LinkButton to={`/l/p/${propertyId}/units/${hook.unitId}/list`} variant="quiet" className={styles.rowAction}>
+                List it
+              </LinkButton>
+            )}
+          </span>
         )}
-        {hook.invite && !confirming && (
+        {hook.invite && !confirming && !readOnly && (
           <span className={styles.inviteActions}>
             <Button
               variant="quiet"

@@ -10,6 +10,7 @@ import { Stamp } from '../design/Stamp'
 import { useLeaseLive } from '../ledger/useLedger'
 import { formatDate, formatDayMonth, formatInstantDate, methodPhrase, ordinal, rupees } from '../lib/format'
 import { useLive } from '../realtime/LiveProvider'
+import { TenantDeposit } from '../deposit/TenantDeposit'
 import { ReceiptDownload } from '../receipts/ReceiptDownload'
 import styles from './SlipPage.module.css'
 import { tenantHomeQuery } from './queries'
@@ -19,13 +20,28 @@ import { usePayment, type Payment } from './usePayment'
 export function SlipPage() {
   const home = useQuery(tenantHomeQuery)
   // Both parties read the same ledger; a charge the landlord adds arrives here as it happens.
-  useLeaseLive(home.data?.lease?.id ?? null)
+  useLeaseLive(home.data?.lease?.id ?? home.data?.movedOutOf?.id ?? null)
 
   if (home.isPending) return <SessionLoading />
   if (home.isError) {
     return <p role="alert">Couldn't load your home. Check your connection and reload.</p>
   }
   const { lease } = home.data
+  if (!lease && home.data.deposit && home.data.movedOutOf) {
+    const past = home.data.movedOutOf
+    return (
+      <div className={styles.layout}>
+        <div className={styles.none}>
+          <h1 className={styles.noneHeading}>Your tenancy has ended</h1>
+          <p>
+            You've moved out of {past.unit.label}, {past.property.name}. Your deposit is settled here, and your receipts
+            stay yours.
+          </p>
+        </div>
+        <TenantDeposit deposit={home.data.deposit} lease={past} />
+      </div>
+    )
+  }
   if (!lease) {
     return (
       <div className={styles.none}>
@@ -65,6 +81,7 @@ function Slip({ home, lease }: { home: TenantHome; lease: LeaseView }) {
         <PaidSlip home={home} landing={landing} />
       )}
       <YourHome lease={lease} />
+      {home.deposit && <TenantDeposit deposit={home.deposit} lease={lease} />}
     </div>
   )
 }

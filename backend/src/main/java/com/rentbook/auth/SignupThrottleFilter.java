@@ -29,7 +29,8 @@ class SignupThrottleFilter extends OncePerRequestFilter {
 
     static final Duration WINDOW = Duration.ofHours(1);
 
-    private static final Pattern ACCEPT = Pattern.compile("^/api/v1/invites/[^/]+/accept$");
+    private static final Pattern ACCEPT = Pattern.compile(
+            "^/api/v1/((caretaker-)?invites/[^/]+/accept|public/listings/[^/]+/enquiries)$");
 
     private final int perWindow;
     private final Clock clock;

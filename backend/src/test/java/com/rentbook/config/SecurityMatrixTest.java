@@ -86,6 +86,14 @@ class SecurityMatrixTest {
     @MockitoBean
     com.rentbook.payment.RecordedPayments recordedPayments;
     @MockitoBean
+    com.rentbook.payment.DepositSettlements depositSettlements;
+    @MockitoBean
+    com.rentbook.caretaker.Caretakers caretakers;
+    @MockitoBean
+    com.rentbook.caretaker.CaretakerWork caretakerWork;
+    @MockitoBean
+    com.rentbook.listing.Listings listings;
+    @MockitoBean
     com.rentbook.maintenance.TicketService ticketService;
     @MockitoBean
     com.rentbook.document.DocumentService documentService;
@@ -127,6 +135,27 @@ class SecurityMatrixTest {
         expectForbidden(post("/api/v1/leases/" + id + "/payments").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"chargeIds\":[\"" + id + "\"],\"method\":\"CASH\",\"receivedOn\":\"2026-09-01\"}"), tenant);
         expectForbidden(get("/api/v1/dashboard/landlord"), tenant);
+    }
+
+    @Test
+    void caretakersReachOnlyTheirOwnDoor() throws Exception {
+        String caretaker = bearer(Role.CARETAKER);
+        String id = UUID.randomUUID().toString();
+        // Everything a caretaker must not do is closed at the URL, before any service runs.
+        expectForbidden(get("/api/v1/properties"), caretaker);
+        expectForbidden(get("/api/v1/dashboard/landlord"), caretaker);
+        expectForbidden(get("/api/v1/dashboard/tenant"), caretaker);
+        expectForbidden(get("/api/v1/payouts/account"), caretaker);
+        expectForbidden(get("/api/v1/caretakers"), caretaker);
+        expectForbidden(post("/api/v1/charges/" + id + "/waive"), caretaker);
+        expectForbidden(post("/api/v1/leases/" + id + "/end").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"endsOn\":\"2026-12-01\"}"), caretaker);
+        expectForbidden(post("/api/v1/leases/" + id + "/deposit/refund").contentType(MediaType.APPLICATION_JSON)
+                .content("{}"), caretaker);
+        // And their door is closed to everyone else.
+        expectForbidden(get("/api/v1/caretaker/board"), bearer(Role.LANDLORD));
+        expectForbidden(get("/api/v1/caretaker/board"), bearer(Role.TENANT));
+        expectForbidden(get("/api/v1/caretakers"), bearer(Role.TENANT));
     }
 
     @Test

@@ -43,6 +43,7 @@ class RecordedPaymentController {
     @ResponseStatus(HttpStatus.CREATED)
     RecordedPayments.Recorded record(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                                      @Valid @RequestBody RecordRequest body) {
-        return recorded.record(CurrentUser.id(jwt), id, body.chargeIds(), body.method(), body.receivedOn(), body.note());
+        return recorded.record(CurrentUser.id(jwt), CurrentUser.id(jwt), id, body.chargeIds(), body.method(),
+                body.receivedOn(), body.note());
     }
 }

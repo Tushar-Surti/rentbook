@@ -18,7 +18,7 @@ const METHODS = [
  * Rent the tenant paid the landlord directly. The ticked charges become Paid for both of them, and the
  * tenant gets a receipt that says the landlord recorded it.
  */
-export function RecordPaymentForm({ leaseId, open }: { leaseId: string; open: LedgerEntry[] }) {
+export function RecordPaymentForm({ leaseId, open, base = '' }: { leaseId: string; open: LedgerEntry[]; base?: string }) {
   const queryClient = useQueryClient()
   // What's due now starts ticked; next month's rent, not yet due, is there to tick if they paid ahead.
   const [picked, setPicked] = useState<Set<string>>(
@@ -56,7 +56,7 @@ export function RecordPaymentForm({ leaseId, open }: { leaseId: string; open: Le
     }
     setBusy(true)
     try {
-      const result = await api<RecordedPayment>(`/leases/${leaseId}/payments`, {
+      const result = await api<RecordedPayment>(`${base}/leases/${leaseId}/payments`, {
         method: 'POST',
         json: { chargeIds: chosen.map((entry) => entry.id), method, receivedOn, note: note.trim() || null },
       })

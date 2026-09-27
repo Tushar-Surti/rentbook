@@ -1,6 +1,6 @@
 // Mirrors the backend's JSON. Dates are ISO strings: LocalDate as "2026-10-05", Instant as full timestamps.
 
-export type Role = 'LANDLORD' | 'TENANT'
+export type Role = 'LANDLORD' | 'TENANT' | 'CARETAKER'
 
 export type Me = {
   id: string
@@ -146,6 +146,8 @@ export type Hook = {
     outstandingPaise: number
   } | null
   invite: { inviteId: string; tenantName: string; expiresAt: string } | null
+  /** Set while the vacant unit is listed publicly. */
+  listingId: string | null
 }
 
 export type PropertyBoard = { id: string; name: string; kind: PropertyKind; city: string; hooks: Hook[] }
@@ -155,6 +157,49 @@ export type LandlordBoard = {
   month: string
   totals: { units: number; occupied: number; vacant: number; openInvites: number; monthlyRentPaise: number }
   properties: PropertyBoard[]
+  /** Move-outs whose deposit is held and not yet settled. */
+  deposits: DepositDue[]
+}
+
+export type DepositStatus = 'PROPOSED' | 'QUERIED' | 'ACCEPTED' | 'SETTLED'
+
+export type DepositDue = {
+  leaseId: string
+  propertyId: string
+  tenantName: string
+  unitLabel: string
+  roomLabel: string | null
+  lastDay: string | null
+  leaseStatus: LeaseStatus
+  heldPaise: number
+  status: DepositStatus | null
+}
+
+export type DeductionLine = { description: string; amountPaise: number; chargeId: string | null }
+
+export type DepositSettlement = {
+  status: DepositStatus
+  heldPaise: number
+  deductions: DeductionLine[]
+  deductedPaise: number
+  refundPaise: number
+  landlordNote: string | null
+  tenantNote: string | null
+  proposedAt: string
+  respondedAt: string | null
+  refund: { method: PaymentMethod; refundedOn: string; reference: string | null } | null
+  settledAt: string | null
+}
+
+export type DepositView = {
+  leaseId: string
+  leaseStatus: LeaseStatus
+  heldPaise: number
+  /** True once the last day is set, a deposit is held and nothing is agreed yet. */
+  canPropose: boolean
+  settlement: DepositSettlement | null
+  /** Unpaid charges the landlord may take from the deposit; empty for the tenant. */
+  openCharges: { id: string; description: string; amountPaise: number; dueOn: string }[]
 }
 
 export type ChargeLine = {
@@ -178,6 +223,10 @@ export type TenantHome = {
   /** A payment the browser reported as made that Razorpay has not confirmed yet. */
   pendingPayment: PendingPayment | null
   lastReceipt: Receipt | null
+  /** The deposit's settlement, when one is under way or the tenant has moved out. */
+  deposit: DepositView | null
+  /** With no live lease: the lease the deposit belongs to. */
+  movedOutOf: LeaseView | null
 }
 
 export type PendingPayment = { id: string; amountPaise: number }
@@ -203,7 +252,7 @@ export type Checkout = {
   prefill: { name: string; email: string; contact: string | null }
 }
 
-export type PaymentMethod = 'RAZORPAY' | 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE'
+export type PaymentMethod = 'RAZORPAY' | 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE' | 'DEPOSIT'
 
 export type Receipt = {
   id: string
@@ -328,3 +377,94 @@ export type UploadTicket = {
 }
 
 export type LiveEnvelope<T = unknown> = { type: string; at: string; data: T }
+
+export type CaretakerStatus = 'INVITED' | 'ACTIVE' | 'REMOVED'
+
+export type PropertyName = { id: string; name: string }
+
+export type CaretakerView = {
+  id: string
+  fullName: string
+  email: string
+  phone: string | null
+  status: CaretakerStatus
+  properties: PropertyName[]
+  inviteExpiresAt: string | null
+}
+
+export type IssuedCaretaker = { caretaker: CaretakerView; link: string }
+
+export type CaretakerPreview = {
+  fullName: string
+  email: string
+  landlordName: string
+  properties: PropertyName[]
+  expiresAt: string
+}
+
+/** A caretaker's book: the registers of the properties they look after, and whose they are. */
+export type CaretakerBoard = {
+  caretakerName: string
+  landlordName: string
+  month: string
+  totals: LandlordBoard['totals']
+  properties: PropertyBoard[]
+}
+
+export type ListingStatus = 'OPEN' | 'CLOSED'
+export type EnquiryStatus = 'NEW' | 'INVITED' | 'DISMISSED'
+
+export type ListingPlace = {
+  propertyId: string
+  propertyName: string
+  propertyKind: 'PG' | 'APARTMENT' | 'HOUSE'
+  city: string
+  pincode: string
+  unitId: string
+  unitKind: UnitKind
+  unitLabel: string
+  roomLabel: string | null
+  /** For a bed: how many beds share its room. */
+  bedsInRoom: number
+}
+
+export type ListingPhoto = { id: string; url: string }
+
+export type ListingEnquiry = {
+  id: string
+  name: string
+  phone: string
+  email: string | null
+  message: string | null
+  visitOn: string | null
+  status: EnquiryStatus
+  receivedAt: string
+}
+
+export type ListingView = {
+  id: string
+  slug: string
+  status: ListingStatus
+  rentPaise: number
+  depositPaise: number
+  availableFrom: string
+  description: string | null
+  place: ListingPlace
+  photos: ListingPhoto[]
+  enquiries: ListingEnquiry[]
+  createdAt: string
+}
+
+export type PublicListing = {
+  slug: string
+  open: boolean
+  landlordFirstName: string
+  place: ListingPlace
+  rentPaise: number
+  depositPaise: number
+  availableFrom: string
+  description: string | null
+  photos: ListingPhoto[]
+}
+
+export type PhotoUploadTicket = { photoId: string; url: string; headers: Record<string, string>; expiresAt: string }

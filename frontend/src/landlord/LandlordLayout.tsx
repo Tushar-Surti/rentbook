@@ -65,6 +65,12 @@ export function LandlordLayout() {
             <Icon name="plus" size={18} />
             Add property
           </NavLink>
+          <NavLink to="/l/listings" className={styles.topLink}>
+            Listings
+          </NavLink>
+          <NavLink to="/l/caretakers" className={styles.topLink}>
+            Caretakers
+          </NavLink>
           <NavLink to="/l/payouts" className={styles.topLink}>
             Payouts
           </NavLink>
