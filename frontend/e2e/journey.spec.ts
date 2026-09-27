@@ -91,6 +91,8 @@ async function capture(page: Page, testInfo: TestInfo, name: string) {
 }
 
 async function expectAccessible(page: Page) {
+  // Contrast is measured on settled colours: a button fading back from busy would read as a false failure.
+  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))))
   const { violations } = await new AxeBuilder({ page }).analyze()
   const serious = violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical')
   expect(serious.map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target).join(', ')}`)).toEqual([])

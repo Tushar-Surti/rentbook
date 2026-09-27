@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import type { ChargeLine, LeaseView, PaymentEvent, TenantHome } from '../api/types'
+import { Link } from 'react-router'
+import type { ChargeLine, LeaseView, MonthRent, PaymentEvent, TenantHome } from '../api/types'
 import { SessionLoading } from '../app/guards'
 import { Button } from '../design/Button'
 import { Icon } from '../design/Icon'
@@ -11,6 +12,9 @@ import { useLeaseLive } from '../ledger/useLedger'
 import { formatDate, formatDayMonth, formatInstantDate, methodPhrase, ordinal, rupees } from '../lib/format'
 import { useLive } from '../realtime/LiveProvider'
 import { TenantDeposit } from '../deposit/TenantDeposit'
+import { addonsQuery } from '../ledger/addons'
+import { ConditionToConfirm, tenantState, useTenantReports } from '../condition/ConditionReports'
+import { reportName } from '../condition/queries'
 import { ReceiptDownload } from '../receipts/ReceiptDownload'
 import styles from './SlipPage.module.css'
 import { tenantHomeQuery } from './queries'
@@ -38,6 +42,7 @@ export function SlipPage() {
             stay yours.
           </p>
         </div>
+        <ConditionToConfirm lease={past} />
         <TenantDeposit deposit={home.data.deposit} lease={past} />
       </div>
     )
@@ -80,7 +85,8 @@ function Slip({ home, lease }: { home: TenantHome; lease: LeaseView }) {
       ) : (
         <PaidSlip home={home} landing={landing} />
       )}
-      <YourHome lease={lease} />
+      <ConditionToConfirm lease={lease} />
+      <YourHome lease={lease} flatmates={home.flatmates} />
       {home.deposit && <TenantDeposit deposit={home.deposit} lease={lease} />}
     </div>
   )
@@ -228,8 +234,11 @@ function PaidSlip({ home, landing }: { home: TenantHome; landing: boolean }) {
   )
 }
 
-function YourHome({ lease }: { lease: LeaseView }) {
+function YourHome({ lease, flatmates }: { lease: LeaseView; flatmates: TenantHome['flatmates'] }) {
   const unit = lease.unit.roomLabel ? `${lease.unit.label}, ${lease.unit.roomLabel}` : lease.unit.label
+  const addons = useQuery(addonsQuery(lease.id))
+  const monthly = addons.data?.filter((addon) => addon.running) ?? []
+  const reports = useTenantReports(lease.id)
   return (
     <Sheet className={styles.home} aria-labelledby="home-heading">
       <h2 id="home-heading" className={styles.homeHeading}>
@@ -266,6 +275,30 @@ function YourHome({ lease }: { lease: LeaseView }) {
             {rupees(lease.rentPaise)} a month, due on the {ordinal(lease.dueDay)}
           </dd>
         </div>
+        {flatmates.length > 0 && (
+          <div>
+            <dt>Shared with</dt>
+            <dd>
+              <ul className={styles.entries}>
+                {flatmates.map((flatmate) => (
+                  <li key={flatmate.name}>
+                    <span className="entry">{flatmate.name}</span>
+                    <span className="entry num">{rupees(flatmate.rentPaise)}</span>
+                    <FlatmateMonth rent={flatmate.thisMonth} />
+                  </li>
+                ))}
+              </ul>
+            </dd>
+          </div>
+        )}
+        {monthly.length > 0 && (
+          <div>
+            <dt>Also every month</dt>
+            <dd className="entry num">
+              {monthly.map((addon) => `${addon.label} ${rupees(addon.amountPaise)}`).join(', ')}
+            </dd>
+          </div>
+        )}
         <div>
           <dt>Deposit</dt>
           <dd className="entry num">{lease.depositPaise > 0 ? rupees(lease.depositPaise) : 'None'}</dd>
@@ -274,6 +307,21 @@ function YourHome({ lease }: { lease: LeaseView }) {
           <dt>Moved in</dt>
           <dd className="entry">{formatDate(lease.startsOn)}</dd>
         </div>
+        {reports.length > 0 && (
+          <div>
+            <dt>Condition</dt>
+            <dd>
+              <ul className={styles.entries}>
+                {reports.map((report) => (
+                  <li key={report.id}>
+                    <Link to={`/t/condition/${report.id}`}>{reportName(report.kind)}</Link>
+                    <span className={styles.contactNote}>{tenantState(report)}</span>
+                  </li>
+                ))}
+              </ul>
+            </dd>
+          </div>
+        )}
         <div>
           <dt>Lease ends</dt>
           <dd className="entry">{lease.endsOn ? formatDate(lease.endsOn) : 'No end date set'}</dd>
@@ -284,6 +332,23 @@ function YourHome({ lease }: { lease: LeaseView }) {
       )}
     </Sheet>
   )
+}
+
+/** A flatmate's month at a glance: whether their share is paid, never what else they owe. */
+function FlatmateMonth({ rent }: { rent: MonthRent | null }) {
+  if (!rent) return null
+  switch (rent.status) {
+    case 'PAID':
+      return <Stamp>Paid</Stamp>
+    case 'UPCOMING':
+      return <Mark tone="upcoming">Due {formatDayMonth(rent.dueOn)}</Mark>
+    case 'DUE':
+      return <Mark tone="due">Due today</Mark>
+    case 'OVERDUE':
+      return <Mark tone="overdue">Overdue</Mark>
+    case 'WAIVED':
+      return <Mark tone="waived">Waived</Mark>
+  }
 }
 
 function firstName(fullName: string) {

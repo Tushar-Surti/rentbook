@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { api, ApiError } from '../api/client'
-import type { DepositStatus, Hook, IssuedInvite, Property, PropertyBoard, Unit } from '../api/types'
+import type { DepositStatus, Hook, IssuedInvite, Occupant, Property, PropertyBoard, Unit } from '../api/types'
 import { SessionLoading } from '../app/guards'
 import { Button, LinkButton } from '../design/Button'
 import { Mark } from '../design/Mark'
@@ -170,7 +170,11 @@ export function Register({ page, month, units, onIssued, base = '/l', readOnly =
   const occupied = page.hooks.filter((hook) => hook.occupant)
   const vacant = page.hooks.filter((hook) => !hook.occupant && !hook.invite && hook.status === 'VACANT').length
   const waiting = page.hooks.filter((hook) => hook.invite).length
-  const billed = occupied.map((hook) => hook.occupant?.thisMonth).filter((rent) => rent && rent.status !== 'WAIVED')
+  // Flatmates each pay their own share, so every one of them counts toward the month.
+  const billed = occupied
+    .flatMap((hook) => [hook.occupant!, ...hook.flatmates])
+    .map((occupant) => occupant.thisMonth)
+    .filter((rent) => rent && rent.status !== 'WAIVED')
   const expected = billed.reduce((sum, rent) => sum + (rent?.amountPaise ?? 0), 0)
   const collected = billed.reduce((sum, rent) => sum + (rent?.status === 'PAID' ? rent.amountPaise : 0), 0)
   const monthName = month ? monthLabel(month) : 'this month'
@@ -242,7 +246,7 @@ export function Register({ page, month, units, onIssued, base = '/l', readOnly =
   )
 }
 
-function RentStatus({ occupant }: { occupant: NonNullable<Hook['occupant']> }) {
+function RentStatus({ occupant }: { occupant: Occupant }) {
   const rent = occupant.thisMonth
   // The row flips live when Razorpay confirms the rent; the stamp lands only on a row that showed it unpaid.
   const [paidWhenShown] = useState(rent?.status === 'PAID')
@@ -271,6 +275,125 @@ function HookRow({ hook, unit, propertyId, onIssued, base, readOnly }: {
   base: string
   readOnly: boolean
 }) {
+  const open = !readOnly && !hook.occupant && !hook.invite && hook.status === 'VACANT'
+  // A flat or a whole room can be shared, each flatmate on their own lease; a bed is one person's.
+  const shareable = !readOnly && hook.occupant && !hook.invite && hook.kind !== 'BED' && hook.status !== 'INACTIVE'
+  const leaseLink = (occupant: Occupant) => (
+    <Link to={`${base}/p/${propertyId}/leases/${occupant.leaseId}`} className="entry">
+      {occupant.tenantName}
+    </Link>
+  )
+
+  return (
+    <>
+      <tr>
+        <td className={styles.unitCell}>{hook.label}</td>
+        <td className={styles.tenantCell}>
+          {hook.occupant ? (
+            leaseLink(hook.occupant)
+          ) : hook.invite ? (
+            <>
+              <Mark tone="invited">Invited</Mark> <span className="entry">{hook.invite.tenantName}</span>
+            </>
+          ) : hook.status === 'INACTIVE' ? (
+            <Mark tone="inactive">Not in use</Mark>
+          ) : (
+            <Mark tone="vacant">Vacant</Mark>
+          )}
+        </td>
+        <td className={`${styles.amount} ${styles.rentCell}`}>
+          {hook.occupant ? (
+            <span className="entry num">{rupees(hook.occupant.rentPaise)}</span>
+          ) : unit?.defaultRentPaise ? (
+            <span className={styles.asking}>asking {rupees(unit.defaultRentPaise)}</span>
+          ) : null}
+        </td>
+        <td className={styles.dueCell}>
+          {hook.occupant ? (
+            <RentStatus occupant={hook.occupant} />
+          ) : hook.invite ? (
+            <span className={styles.asking}>link expires {formatInstantShort(hook.invite.expiresAt)}</span>
+          ) : null}
+        </td>
+        <td className={styles.actionCell}>
+          {open && (
+            <span className={styles.inviteActions}>
+              <LinkButton to={`/l/p/${propertyId}/units/${hook.unitId}/invite`} variant="quiet" className={styles.rowAction}>
+                Invite a tenant
+              </LinkButton>
+              {hook.listingId ? (
+                <LinkButton to={`/l/listings/${hook.listingId}`} variant="quiet" className={styles.rowAction}>
+                  Listed
+                </LinkButton>
+              ) : (
+                <LinkButton to={`/l/p/${propertyId}/units/${hook.unitId}/list`} variant="quiet" className={styles.rowAction}>
+                  List it
+                </LinkButton>
+              )}
+            </span>
+          )}
+          {shareable && hook.flatmates.length === 0 && (
+            <LinkButton
+              to={`/l/p/${propertyId}/units/${hook.unitId}/invite?flatmate=1`}
+              variant="quiet"
+              className={styles.rowAction}
+            >
+              Add a flatmate
+            </LinkButton>
+          )}
+          {hook.invite && !hook.occupant && !readOnly && <InviteActions invite={hook.invite} onIssued={onIssued} />}
+        </td>
+      </tr>
+      {hook.flatmates.map((flatmate, index) => (
+        <tr key={flatmate.leaseId} className={styles.shareRow}>
+          <td className={styles.unitCell}>
+            <span className="visually-hidden">{hook.label}, shared</span>
+          </td>
+          <td className={styles.tenantCell}>{leaseLink(flatmate)}</td>
+          <td className={`${styles.amount} ${styles.rentCell}`}>
+            <span className="entry num">{rupees(flatmate.rentPaise)}</span>
+          </td>
+          <td className={styles.dueCell}>
+            <RentStatus occupant={flatmate} />
+          </td>
+          <td className={styles.actionCell}>
+            {shareable && index === hook.flatmates.length - 1 && (
+              <LinkButton
+                to={`/l/p/${propertyId}/units/${hook.unitId}/invite?flatmate=1`}
+                variant="quiet"
+                className={styles.rowAction}
+              >
+                Add a flatmate
+              </LinkButton>
+            )}
+          </td>
+        </tr>
+      ))}
+      {hook.occupant && hook.invite && (
+        <tr className={styles.shareRow}>
+          <td className={styles.unitCell}>
+            <span className="visually-hidden">{hook.label}, shared</span>
+          </td>
+          <td className={styles.tenantCell}>
+            <Mark tone="invited">Invited</Mark> <span className="entry">{hook.invite.tenantName}</span>
+          </td>
+          <td className={`${styles.amount} ${styles.rentCell}`} />
+          <td className={styles.dueCell}>
+            <span className={styles.asking}>link expires {formatInstantShort(hook.invite.expiresAt)}</span>
+          </td>
+          <td className={styles.actionCell}>
+            {!readOnly && <InviteActions invite={hook.invite} onIssued={onIssued} />}
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
+
+function InviteActions({ invite, onIssued }: {
+  invite: NonNullable<Hook['invite']>
+  onIssued: (issued: IssuedInvite) => void
+}) {
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['board'] })
@@ -287,94 +410,44 @@ function HookRow({ hook, unit, propertyId, onIssued, base, readOnly }: {
     onSuccess: () => void refresh(),
   })
   const failure = resend.error ?? revoke.error
-  const open = !readOnly && !hook.occupant && !hook.invite && hook.status === 'VACANT'
 
   return (
-    <tr>
-      <td className={styles.unitCell}>{hook.label}</td>
-      <td className={styles.tenantCell}>
-        {hook.occupant ? (
-          <Link to={`${base}/p/${propertyId}/leases/${hook.occupant.leaseId}`} className="entry">
-            {hook.occupant.tenantName}
-          </Link>
-        ) : hook.invite ? (
-          <>
-            <Mark tone="invited">Invited</Mark> <span className="entry">{hook.invite.tenantName}</span>
-          </>
-        ) : hook.status === 'INACTIVE' ? (
-          <Mark tone="inactive">Not in use</Mark>
-        ) : (
-          <Mark tone="vacant">Vacant</Mark>
-        )}
-      </td>
-      <td className={`${styles.amount} ${styles.rentCell}`}>
-        {hook.occupant ? (
-          <span className="entry num">{rupees(hook.occupant.rentPaise)}</span>
-        ) : unit?.defaultRentPaise ? (
-          <span className={styles.asking}>asking {rupees(unit.defaultRentPaise)}</span>
-        ) : null}
-      </td>
-      <td className={styles.dueCell}>
-        {hook.occupant ? (
-          <RentStatus occupant={hook.occupant} />
-        ) : hook.invite ? (
-          <span className={styles.asking}>link expires {formatInstantShort(hook.invite.expiresAt)}</span>
-        ) : null}
-      </td>
-      <td className={styles.actionCell}>
-        {open && (
-          <span className={styles.inviteActions}>
-            <LinkButton to={`/l/p/${propertyId}/units/${hook.unitId}/invite`} variant="quiet" className={styles.rowAction}>
-              Invite a tenant
-            </LinkButton>
-            {hook.listingId ? (
-              <LinkButton to={`/l/listings/${hook.listingId}`} variant="quiet" className={styles.rowAction}>
-                Listed
-              </LinkButton>
-            ) : (
-              <LinkButton to={`/l/p/${propertyId}/units/${hook.unitId}/list`} variant="quiet" className={styles.rowAction}>
-                List it
-              </LinkButton>
-            )}
-          </span>
-        )}
-        {hook.invite && !confirming && !readOnly && (
-          <span className={styles.inviteActions}>
-            <Button
-              variant="quiet"
-              className={styles.rowAction}
-              busy={resend.isPending}
-              onClick={() => resend.mutate(hook.invite!.inviteId)}
-            >
-              New link
-            </Button>
-            <Button variant="quiet" className={styles.rowAction} onClick={() => setConfirming(true)}>
-              Withdraw
-            </Button>
-          </span>
-        )}
-        {hook.invite && confirming && (
-          <span className={styles.inviteActions}>
-            <span>Withdraw {hook.invite.tenantName}'s invite?</span>
-            <Button
-              variant="quiet"
-              className={styles.rowAction}
-              busy={revoke.isPending}
-              onClick={() => revoke.mutate(hook.invite!.inviteId)}
-            >
-              Withdraw
-            </Button>
-            <Button variant="quiet" className={styles.rowAction} onClick={() => setConfirming(false)}>
-              Keep it
-            </Button>
-          </span>
-        )}
-        {failure && (
-          <span role="alert" className={styles.rowError}>
-            {failure instanceof ApiError ? failure.message : 'That did not go through. Try again.'}
-          </span>
-        )}
-      </td>
-    </tr>
+    <>
+      {!confirming ? (
+        <span className={styles.inviteActions}>
+          <Button
+            variant="quiet"
+            className={styles.rowAction}
+            busy={resend.isPending}
+            onClick={() => resend.mutate(invite.inviteId)}
+          >
+            New link
+          </Button>
+          <Button variant="quiet" className={styles.rowAction} onClick={() => setConfirming(true)}>
+            Withdraw
+          </Button>
+        </span>
+      ) : (
+        <span className={styles.inviteActions}>
+          <span>Withdraw {invite.tenantName}'s invite?</span>
+          <Button
+            variant="quiet"
+            className={styles.rowAction}
+            busy={revoke.isPending}
+            onClick={() => revoke.mutate(invite.inviteId)}
+          >
+            Withdraw
+          </Button>
+          <Button variant="quiet" className={styles.rowAction} onClick={() => setConfirming(false)}>
+            Keep it
+          </Button>
+        </span>
+      )}
+      {failure && (
+        <span role="alert" className={styles.rowError}>
+          {failure instanceof ApiError ? failure.message : 'That did not go through. Try again.'}
+        </span>
+      )}
+    </>
   )
 }

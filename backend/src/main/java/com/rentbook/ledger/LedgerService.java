@@ -43,13 +43,21 @@ public class LedgerService {
     private final Clock clock;
 
     LedgerService(ChargeRepository charges, LeaseRepository leases, LeaseService leaseService, UserRepository users,
-                  ApplicationEventPublisher events, Clock clock) {
+                  ApplicationEventPublisher events, Clock clock, RecurringChargeRepository addons) {
+        this.addons = addons;
         this.charges = charges;
         this.leases = leases;
         this.leaseService = leaseService;
         this.users = users;
         this.events = events;
         this.clock = clock;
+    }
+
+    private final RecurringChargeRepository addons;
+
+    /** A monthly add-on: {@code running} until stopped; {@code endsMonth} is the last month billed once it is. */
+    public record Addon(UUID id, Charge.Kind kind, String label, long amountPaise, LocalDate startsMonth,
+                        LocalDate endsMonth, boolean running) {
     }
 
     /** UPCOMING is not due yet, DUE falls due today, OVERDUE is past its date. Only a verified payment makes PAID. */
@@ -116,7 +124,83 @@ public class LedgerService {
                     rent.getAmountPaise(), null));
             created++;
         }
+        return created + syncAddons(lease, today, horizon);
+    }
+
+    /**
+     * Each running add-on gets a line for every month rent is billed for, due with that month's rent. A month
+     * whose rent day has already passed when the add-on was set up is due the day it was set up, never earlier.
+     */
+    private int syncAddons(Lease lease, LocalDate today, LocalDate horizon) {
+        int created = 0;
+        for (RecurringCharge addon : addons.findByLeaseIdOrderByCreatedAtAsc(lease.getId())) {
+            LocalDate setUpOn = addon.getCreatedAt() == null ? today : LocalDate.ofInstant(addon.getCreatedAt(), IndiaTime.ZONE);
+            YearMonth first = YearMonth.from(addon.getStartsMonth());
+            YearMonth leaseStart = YearMonth.from(lease.getStartsOn());
+            for (YearMonth period = first.isBefore(leaseStart) ? leaseStart : first; ; period = period.plusMonths(1)) {
+                LocalDate rentDay = dueDate(lease, period);
+                LocalDate dueOn = rentDay.isBefore(setUpOn) && period.equals(first) ? setUpOn : rentDay;
+                if (dueOn.isAfter(horizon) || !addon.runsIn(period)
+                        || (lease.getEndsOn() != null && !period.atDay(1).isBefore(lease.getEndsOn()))) {
+                    break;
+                }
+                if (rentDay.isBefore(setUpOn) && !period.equals(first)
+                        || charges.existsByRecurringIdAndRecurringMonth(addon.getId(), period.atDay(1))) {
+                    continue;
+                }
+                Charge charge = charges.save(Charge.addon(lease, addon, period, dueOn));
+                events.publishEvent(new LedgerChanged(lease.getId(), "charge.added", charge.getDescription(),
+                        charge.getAmountPaise(), null));
+                created++;
+            }
+        }
         return created;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Addon> addons(UUID leaseId, UUID userId, Role role) {
+        leaseService.require(leaseId, userId, role);
+        return addons.findByLeaseIdOrderByCreatedAtAsc(leaseId).stream().map(LedgerService::addon).toList();
+    }
+
+    /** Set up once; the first month is billed now if its rent is, and every month after with the rent. */
+    @Transactional
+    public Addon addAddon(UUID landlordId, UUID leaseId, Charge.Kind kind, String label, long amountPaise,
+                          YearMonth startsMonth) {
+        Lease lease = leaseService.require(leaseId, landlordId, Role.LANDLORD);
+        if (!lease.isLive()) {
+            throw ApiException.conflict("lease_ended", "This lease has ended.");
+        }
+        if (kind == Charge.Kind.RENT || kind == Charge.Kind.DEPOSIT) {
+            throw ApiException.badRequest("charge_kind", "Rent and deposit are added automatically.");
+        }
+        YearMonth thisMonth = YearMonth.from(today());
+        if (startsMonth.isBefore(thisMonth)) {
+            throw ApiException.badRequest("starts_in_past", "Start it this month or later; past months aren't billed.");
+        }
+        RecurringCharge addon = addons.saveAndFlush(new RecurringCharge(leaseId, kind, label, amountPaise, startsMonth,
+                landlordId));
+        syncRent(lease, today());
+        return addon(addon);
+    }
+
+    /** Nothing more is billed after the latest month already on the book; those lines stay, to pay or waive. */
+    @Transactional
+    public Addon stopAddon(UUID landlordId, UUID addonId) {
+        RecurringCharge addon = addons.findById(addonId).orElseThrow(() -> ApiException.notFound("Add-on"));
+        leaseService.require(addon.getLeaseId(), landlordId, Role.LANDLORD);
+        if (addon.isRunning()) {
+            YearMonth last = charges.findTopByRecurringIdOrderByRecurringMonthDesc(addon.getId())
+                    .map(charge -> YearMonth.from(charge.getRecurringMonth()))
+                    .orElse(YearMonth.from(addon.getStartsMonth()).minusMonths(1));
+            addon.stopAfter(last);
+        }
+        return addon(addon);
+    }
+
+    private static Addon addon(RecurringCharge addon) {
+        return new Addon(addon.getId(), addon.getKind(), addon.getLabel(), addon.getAmountPaise(), addon.getStartsMonth(),
+                addon.getEndsMonth(), addon.isRunning());
     }
 
     /** The due day of the month, or the move-in date when that comes later in the first month. */
@@ -167,8 +251,8 @@ public class LedgerService {
         LeaseService.LeaseView lease = event.lease();
         Instant now = clock.instant();
         for (Charge charge : charges.findByLeaseIdInAndStatus(List.of(lease.id()), Charge.Status.DUE)) {
-            if (charge.getKind() == Charge.Kind.RENT && charge.getPeriodMonth() != null
-                    && charge.getPeriodMonth().isAfter(lease.endsOn())) {
+            LocalDate month = charge.getKind() == Charge.Kind.RENT ? charge.getPeriodMonth() : charge.getRecurringMonth();
+            if (month != null && month.isAfter(lease.endsOn())) {
                 charge.waive(lease.landlord().id(), now);
                 events.publishEvent(new LedgerChanged(lease.id(), "charge.waived", charge.getDescription(),
                         charge.getAmountPaise(), lease.landlord().fullName()));

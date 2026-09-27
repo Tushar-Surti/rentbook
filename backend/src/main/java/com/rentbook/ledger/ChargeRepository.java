@@ -21,6 +21,10 @@ public interface ChargeRepository extends JpaRepository<Charge, UUID> {
 
     boolean existsByLeaseIdAndKindAndPeriodMonth(UUID leaseId, Charge.Kind kind, LocalDate periodMonth);
 
+    boolean existsByRecurringIdAndRecurringMonth(UUID recurringId, LocalDate recurringMonth);
+
+    java.util.Optional<Charge> findTopByRecurringIdOrderByRecurringMonthDesc(UUID recurringId);
+
     boolean existsByLeaseIdAndKind(UUID leaseId, Charge.Kind kind);
 
     Optional<Charge> findTopByLeaseIdAndKindOrderByPeriodMonthDesc(UUID leaseId, Charge.Kind kind);

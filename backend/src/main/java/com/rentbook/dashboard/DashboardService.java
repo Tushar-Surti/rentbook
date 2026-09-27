@@ -81,9 +81,12 @@ public class DashboardService {
     }
 
     /** One leasable unit: a flat, a bed, or a room that is let whole. */
-    /** {@code listingId} is set while a vacant unit is listed publicly. */
+    /**
+     * {@code occupant} is who lives there (the longest-standing, when flatmates share it); {@code flatmates} are
+     * the others sharing it, each on their own lease. {@code listingId} is set while a vacant unit is listed.
+     */
     public record Hook(UUID unitId, Unit.Kind kind, String label, UUID roomId, String roomLabel, Unit.Status status,
-                Occupant occupant, OpenInvite invite, UUID listingId) {
+                Occupant occupant, OpenInvite invite, UUID listingId, List<Occupant> flatmates) {
     }
 
     public record PropertyBoard(UUID id, String name, Property.Kind kind, String city, List<Hook> hooks) {
@@ -112,7 +115,12 @@ public class DashboardService {
     public record TenantHome(LeaseService.LeaseView lease, List<ChargeLine> outstanding, long outstandingPaise,
                       boolean overdue, LocalDate nextDueOn, long nextRentPaise, boolean payOnline,
                       CheckoutService.PendingPayment pendingPayment, ReceiptService.ReceiptView lastReceipt,
-                      DepositSettlements.DepositView deposit, LeaseService.LeaseView movedOutOf) {
+                      DepositSettlements.DepositView deposit, LeaseService.LeaseView movedOutOf,
+                      List<Flatmate> flatmates) {
+    }
+
+    /** Someone sharing the tenant's flat: their share of the rent, and whether this month's is paid. */
+    public record Flatmate(String name, long rentPaise, MonthRent thisMonth) {
     }
 
     @Transactional(readOnly = true)
@@ -120,13 +128,15 @@ public class DashboardService {
         Instant now = clock.instant();
         LocalDate today = ledger.today();
         YearMonth month = YearMonth.from(today);
-        Map<UUID, Lease> liveByUnit = leases.findByLandlordIdOrderByStartsOnDesc(landlordId).stream()
-                .filter(Lease::isLive)
-                .collect(Collectors.toMap(Lease::getUnitId, Function.identity(), (first, second) -> first));
-        List<UUID> leaseIds = liveByUnit.values().stream().map(Lease::getId).toList();
+        List<Lease> live = leases.findByLandlordIdOrderByStartsOnDesc(landlordId).stream().filter(Lease::isLive)
+                .sorted(Comparator.comparing(Lease::getStartsOn).thenComparing(Lease::getCreatedAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+        Map<UUID, List<Lease>> liveByUnit = live.stream().collect(Collectors.groupingBy(Lease::getUnitId));
+        List<UUID> leaseIds = live.stream().map(Lease::getId).toList();
         Map<UUID, Charge> rentThisMonth = ledger.rentFor(leaseIds, month);
         Map<UUID, List<Charge>> open = ledger.openCharges(leaseIds);
-        Map<UUID, String> tenantNames = users.findAllById(liveByUnit.values().stream().map(Lease::getTenantId).toList())
+        Map<UUID, String> tenantNames = users.findAllById(live.stream().map(Lease::getTenantId).toList())
                 .stream().collect(Collectors.toMap(User::getId, User::getFullName));
         Map<UUID, UUID> listed = listings.openByUnit(landlordId);
         Map<UUID, Invite> openByUnit = inviteService.list(landlordId).stream()
@@ -141,18 +151,20 @@ public class DashboardService {
                     .filter(unit -> !roomsWithBeds.contains(unit.getId()))
                     .map(unit -> {
                         Unit room = unit.getParentUnitId() == null ? null : byId.get(unit.getParentUnitId());
-                        Lease lease = liveByUnit.get(unit.getId());
+                        List<Occupant> living = liveByUnit.getOrDefault(unit.getId(), List.of()).stream()
+                                .map(lease -> new Occupant(lease.getId(), lease.getTenantId(),
+                                        tenantNames.get(lease.getTenantId()), lease.getRentPaise(), lease.getDueDay(),
+                                        monthRent(rentThisMonth.get(lease.getId()), today),
+                                        sum(open.getOrDefault(lease.getId(), List.of()))))
+                                .toList();
                         Invite invite = openByUnit.get(unit.getId());
-                        Occupant occupant = lease == null ? null : new Occupant(lease.getId(), lease.getTenantId(),
-                                tenantNames.get(lease.getTenantId()), lease.getRentPaise(), lease.getDueDay(),
-                                monthRent(rentThisMonth.get(lease.getId()), today),
-                                sum(open.getOrDefault(lease.getId(), List.of())));
                         return new Hook(unit.getId(), unit.getKind(), unit.getLabel(),
                                 room == null ? null : room.getId(), room == null ? null : room.getLabel(),
-                                unit.getStatus(), occupant,
+                                unit.getStatus(), living.isEmpty() ? null : living.getFirst(),
                                 invite == null ? null : new OpenInvite(invite.getId(), invite.getTenantName(),
                                         invite.getExpiresAt()),
-                                lease == null ? listed.get(unit.getId()) : null);
+                                living.isEmpty() ? listed.get(unit.getId()) : null,
+                                living.isEmpty() ? List.of() : living.subList(1, living.size()));
                     })
                     .toList();
             Property property = entry.property();
@@ -162,7 +174,7 @@ public class DashboardService {
         List<Hook> all = boards.stream().flatMap(board -> board.hooks().stream()).toList();
         int occupied = (int) all.stream().filter(hook -> hook.occupant() != null).count();
         int vacant = (int) all.stream().filter(hook -> hook.status() == Unit.Status.VACANT).count();
-        long rent = liveByUnit.values().stream().mapToLong(Lease::getRentPaise).sum();
+        long rent = live.stream().mapToLong(Lease::getRentPaise).sum();
         return new LandlordBoard(month, new Totals(all.size(), occupied, vacant, openByUnit.size(), rent), boards,
                 deposits.due(landlordId));
     }
@@ -177,7 +189,7 @@ public class DashboardService {
             LeaseService.LeaseView ended = own.stream().findFirst().orElse(null);
             DepositSettlements.DepositView deposit = ended == null ? null : deposits.forTenant(ended.id(), tenantId);
             return new TenantHome(null, List.of(), 0, false, null, 0, false, null, null, deposit,
-                    deposit == null ? null : ended);
+                    deposit == null ? null : ended, List.of());
         }
         LocalDate today = ledger.today();
         List<Charge> open = ledger.openCharges(List.of(current.id())).getOrDefault(current.id(), List.of()).stream()
@@ -191,7 +203,19 @@ public class DashboardService {
         return new TenantHome(current, lines, sum(open), open.stream().anyMatch(charge -> charge.isOverdue(today)),
                 ledger.nextRentDue(lease), current.rentPaise(), payouts.acceptsOnlinePayments(lease.getLandlordId()),
                 checkout.pending(current.id()).orElse(null), receipts.latestForLease(current.id()).orElse(null),
-                deposits.forTenant(current.id(), tenantId), null);
+                deposits.forTenant(current.id(), tenantId), null, flatmates(lease, today));
+    }
+
+    private List<Flatmate> flatmates(Lease lease, LocalDate today) {
+        List<Lease> others = leaseService.flatmatesOf(lease);
+        if (others.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, Charge> rent = ledger.rentFor(others.stream().map(Lease::getId).toList(), YearMonth.from(today));
+        Map<UUID, String> names = users.findAllById(others.stream().map(Lease::getTenantId).toList()).stream()
+                .collect(Collectors.toMap(User::getId, User::getFullName));
+        return others.stream().map(other -> new Flatmate(names.getOrDefault(other.getTenantId(), "A flatmate"),
+                other.getRentPaise(), monthRent(rent.get(other.getId()), today))).toList();
     }
 
     private static MonthRent monthRent(Charge charge, LocalDate today) {

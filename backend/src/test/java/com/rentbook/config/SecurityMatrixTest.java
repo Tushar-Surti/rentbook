@@ -34,7 +34,9 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -94,6 +96,8 @@ class SecurityMatrixTest {
     @MockitoBean
     com.rentbook.listing.Listings listings;
     @MockitoBean
+    com.rentbook.condition.ConditionReports conditionReports;
+    @MockitoBean
     com.rentbook.maintenance.TicketService ticketService;
     @MockitoBean
     com.rentbook.document.DocumentService documentService;
@@ -135,6 +139,19 @@ class SecurityMatrixTest {
         expectForbidden(post("/api/v1/leases/" + id + "/payments").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"chargeIds\":[\"" + id + "\"],\"method\":\"CASH\",\"receivedOn\":\"2026-09-01\"}"), tenant);
         expectForbidden(get("/api/v1/dashboard/landlord"), tenant);
+        // The landlord writes and sends a condition report; the tenant only confirms it.
+        expectForbidden(post("/api/v1/leases/" + id + "/condition-reports").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"kind\":\"MOVE_IN\"}"), tenant);
+        expectForbidden(post("/api/v1/condition-reports/" + id + "/send"), tenant);
+        expectForbidden(patch("/api/v1/condition-lines/" + id).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"condition\":\"GOOD\"}"), tenant);
+        expectForbidden(delete("/api/v1/condition-reports/" + id), tenant);
+    }
+
+    @Test
+    void onlyTheTenantConfirmsAConditionReport() throws Exception {
+        expectForbidden(post("/api/v1/condition-reports/" + UUID.randomUUID() + "/confirm")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"notes\":[]}"), bearer(Role.LANDLORD));
     }
 
     @Test

@@ -71,9 +71,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/invites").hasRole("LANDLORD")
                         .requestMatchers(HttpMethod.POST, "/api/v1/invites/*/resend", "/api/v1/invites/*/revoke",
                                 "/api/v1/leases/*/end", "/api/v1/leases/*/charges", "/api/v1/leases/*/payments",
-                                "/api/v1/charges/*/waive", "/api/v1/leases/*/deposit/refund")
+                                "/api/v1/charges/*/waive", "/api/v1/leases/*/deposit/refund", "/api/v1/leases/*/addons",
+                                "/api/v1/addons/*/stop")
                         .hasRole("LANDLORD")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/leases/*/deposit").hasRole("LANDLORD")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/leases/*/condition-reports",
+                                "/api/v1/condition-reports/*/lines", "/api/v1/condition-reports/*/send")
+                        .hasRole("LANDLORD")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/condition-lines/*").hasRole("LANDLORD")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/condition-lines/*", "/api/v1/condition-reports/*")
+                        .hasRole("LANDLORD")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/condition-reports/*/confirm").hasRole("TENANT")
                         .requestMatchers(HttpMethod.POST, "/api/v1/leases/*/deposit/accept", "/api/v1/leases/*/deposit/query")
                         .hasRole("TENANT")
                         .requestMatchers("/api/v1/dashboard/tenant", "/api/v1/payments/**").hasRole("TENANT")

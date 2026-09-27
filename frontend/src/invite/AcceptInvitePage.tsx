@@ -59,9 +59,16 @@ export function AcceptInvitePage() {
         <main className={styles.main}>
           <div className={styles.intro}>
             <h1 className={styles.heading}>
-              {preview.data.landlordName} has invited you to rent {unitName(preview.data)} at{' '}
-              {preview.data.propertyName}
+              {preview.data.landlordName} has invited you to {preview.data.flatmate ? 'share' : 'rent'}{' '}
+              {unitName(preview.data)} at {preview.data.propertyName}
             </h1>
+            {preview.data.flatmate && preview.data.sharedWith.length > 0 && (
+              <p className={styles.lede}>
+                You'll have your own lease for your share of the rent, alongside{' '}
+                <span className="entry">{listNames(preview.data.sharedWith)}</span>. Flatmates see each other's share
+                and whether this month is paid.
+              </p>
+            )}
           </div>
           <Terms invite={preview.data} />
           {state.status === 'signed-in' && state.user.email === preview.data.email ? (
@@ -94,7 +101,7 @@ function Terms({ invite }: { invite: InvitePreview }) {
       </h2>
       <dl className={styles.list}>
         <div>
-          <dt>Rent</dt>
+          <dt>{invite.flatmate ? 'Your share' : 'Rent'}</dt>
           <dd className="entry num">{rupees(invite.rentPaise)} a month</dd>
         </div>
         <div>
@@ -228,3 +235,6 @@ function InviteUnavailable({ error }: { error: Error }) {
     </main>
   )
 }
+
+const listNames = (names: string[]) =>
+  names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`

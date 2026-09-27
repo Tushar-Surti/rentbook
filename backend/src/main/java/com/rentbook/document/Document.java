@@ -17,7 +17,7 @@ import java.util.UUID;
 @Table(name = "documents")
 public class Document extends BaseEntity {
 
-    public enum Type { LEASE, KYC, RECEIPT, TICKET_PHOTO, OTHER }
+    public enum Type { LEASE, KYC, RECEIPT, TICKET_PHOTO, CONDITION_PHOTO, OTHER }
 
     public enum Visibility { LANDLORD_ONLY, LEASE_PARTIES }
 
@@ -31,6 +31,10 @@ public class Document extends BaseEntity {
 
     @Column(name = "ticket_event_id")
     private UUID ticketEventId;
+
+    /** Set for a photo of one line on a move-in or move-out condition report. */
+    @Column(name = "condition_item_id", updatable = false)
+    private UUID conditionItemId;
 
     @Column(name = "uploaded_by", nullable = false, updatable = false)
     private UUID uploadedBy;
@@ -75,6 +79,15 @@ public class Document extends BaseEntity {
         this.storageKey = "leases/" + leaseId + "/" + getId() + extension;
     }
 
+    /** A photo of one line on a condition report; it belongs to that line from the start. */
+    static Document conditionPhoto(UUID landlordId, UUID leaseId, UUID uploadedBy, UUID conditionItemId,
+                                   String filename, String contentType, String extension) {
+        Document photo = new Document(landlordId, leaseId, uploadedBy, Type.CONDITION_PHOTO,
+                Visibility.LEASE_PARTIES, filename, contentType, extension);
+        photo.conditionItemId = conditionItemId;
+        return photo;
+    }
+
     void markAvailable(long size) {
         this.sizeBytes = size;
         this.status = Status.AVAILABLE;
@@ -98,6 +111,10 @@ public class Document extends BaseEntity {
 
     public UUID getTicketEventId() {
         return ticketEventId;
+    }
+
+    public UUID getConditionItemId() {
+        return conditionItemId;
     }
 
     public UUID getUploadedBy() {

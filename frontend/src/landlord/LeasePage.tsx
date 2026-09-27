@@ -13,7 +13,9 @@ import { vaultQuery } from '../documents/queries'
 import { ReceiptTable } from '../receipts/ReceiptTable'
 import { receiptsQuery } from '../receipts/receipts'
 import { LandlordDeposit } from '../deposit/LandlordDeposit'
+import { LeaseConditionReports } from '../condition/ConditionReports'
 import { AddChargeForm } from './AddChargeForm'
+import { Addons } from './Addons'
 import { EndLeaseForm } from './EndLeaseForm'
 import { RecordPaymentForm } from './RecordPaymentForm'
 import styles from './LeasePage.module.css'
@@ -115,6 +117,13 @@ export function LeasePage() {
         )}
       </section>
 
+      <section className={styles.section} aria-labelledby="condition-heading">
+        <h2 id="condition-heading" className={styles.sectionHeading}>
+          Condition
+        </h2>
+        <LeaseConditionReports lease={view} />
+      </section>
+
       {view.status !== 'ACTIVE' && (
         <section className={styles.section} aria-labelledby="deposit-heading">
           <h2 id="deposit-heading" className={styles.sectionHeading}>
@@ -151,6 +160,15 @@ export function LeasePage() {
             leaseId={leaseId}
             open={ledger.data.entries.filter(isOpen)}
           />
+        </section>
+      )}
+
+      {view.status !== 'ENDED' && (
+        <section className={styles.section} aria-labelledby="monthly-heading">
+          <h2 id="monthly-heading" className={styles.sectionHeading}>
+            Every month
+          </h2>
+          <Addons leaseId={leaseId} tenantFirstName={view.tenant.fullName.split(' ')[0]} />
         </section>
       )}
 

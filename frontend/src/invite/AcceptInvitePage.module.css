@@ -26,6 +26,11 @@
   font-size: var(--text-2xl);
 }
 
+.lede {
+  margin-top: var(--space-3);
+  color: var(--graphite-soft);
+}
+
 .terms {
   display: grid;
   gap: var(--space-4);

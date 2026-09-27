@@ -144,6 +144,27 @@
   margin: 0;
 }
 
+/* Short lists inside a line of "Your home": flatmates with their share and month, condition reports. */
+.entries {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entries li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+.contactNote {
+  color: var(--graphite-soft);
+  font-size: var(--text-sm);
+}
+
 .contact {
   display: flex;
   flex-wrap: wrap;

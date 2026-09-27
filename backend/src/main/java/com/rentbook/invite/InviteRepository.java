@@ -23,5 +23,5 @@ public interface InviteRepository extends JpaRepository<Invite, UUID> {
 
     List<Invite> findByLandlordIdOrderByCreatedAtDesc(UUID landlordId);
 
-    Optional<Invite> findByUnitIdAndStatus(UUID unitId, Invite.Status status);
+    List<Invite> findByUnitIdAndStatus(UUID unitId, Invite.Status status);
 }

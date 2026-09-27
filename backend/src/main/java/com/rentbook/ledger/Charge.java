@@ -62,6 +62,13 @@ public class Charge extends BaseEntity {
     @Column(name = "created_by", updatable = false)
     private UUID createdBy;
 
+    /** Set on a month's line of a recurring add-on, so each month is made once. */
+    @Column(name = "recurring_id", updatable = false)
+    private UUID recurringId;
+
+    @Column(name = "recurring_month", updatable = false)
+    private LocalDate recurringMonth;
+
     protected Charge() {
     }
 
@@ -84,6 +91,15 @@ public class Charge extends BaseEntity {
     static Charge deposit(Lease lease) {
         return new Charge(lease.getId(), Kind.DEPOSIT, null, "Security deposit", lease.getDepositPaise(),
                 lease.getStartsOn(), null);
+    }
+
+    /** One month of a recurring add-on: "Wi-Fi for October 2026", due with that month's rent. */
+    static Charge addon(Lease lease, RecurringCharge addon, YearMonth period, LocalDate dueOn) {
+        Charge charge = new Charge(lease.getId(), addon.getKind(), null, addon.getLabel() + " for " + MONTH.format(period),
+                addon.getAmountPaise(), dueOn, null);
+        charge.recurringId = addon.getId();
+        charge.recurringMonth = period.atDay(1);
+        return charge;
     }
 
     static Charge extra(Lease lease, Kind kind, String description, long amountPaise, LocalDate dueOn, UUID createdBy) {
@@ -122,6 +138,14 @@ public class Charge extends BaseEntity {
 
     public Kind getKind() {
         return kind;
+    }
+
+    public UUID getRecurringId() {
+        return recurringId;
+    }
+
+    public LocalDate getRecurringMonth() {
+        return recurringMonth;
     }
 
     public LocalDate getPeriodMonth() {

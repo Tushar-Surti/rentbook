@@ -115,6 +115,15 @@
   padding-left: var(--space-5);
 }
 
+/* Flatmates sit under the flat they share, ruled lightly so the flat reads as one entry. */
+.register tbody tr:has(+ .shareRow) td {
+  border-bottom-style: dotted;
+}
+
+.register .shareRow td {
+  padding-top: var(--space-2);
+}
+
 .register .amount {
   text-align: right;
   white-space: nowrap;
@@ -280,6 +289,22 @@
 
   .inviteActions {
     justify-content: flex-start;
+  }
+
+  /* A flatmate's line leads with their name; the flat above already says which unit it is. */
+  .register tbody tr.shareRow {
+    grid-template-areas:
+      'tenant rent'
+      'action due';
+    padding-top: var(--space-2);
+  }
+
+  .register .shareRow .unitCell {
+    position: absolute;
+  }
+
+  .register tbody tr:has(+ .shareRow) {
+    border-bottom-style: dotted;
   }
 
   .register .room .unitCell {

@@ -86,6 +86,10 @@ export const router = createBrowserRouter([
             lazy: screen(() => import('../landlord/LeasePage'), (m) => m.LeasePage),
           },
           {
+            path: 'p/:propertyId/leases/:leaseId/condition/:reportId',
+            lazy: screen(() => import('../condition/ConditionReportPage'), (m) => m.LandlordConditionPage),
+          },
+          {
             path: 'p/:propertyId/requests/:ticketId',
             lazy: screen(() => import('../landlord/RequestPage'), (m) => m.LandlordRequestPage),
           },
@@ -109,6 +113,10 @@ export const router = createBrowserRouter([
             lazy: screen(() => import('../tenant/RequestPage'), (m) => m.TenantRequestPage),
           },
           { path: 'documents', lazy: screen(() => import('../tenant/DocumentsPage'), (m) => m.DocumentsPage) },
+          {
+            path: 'condition/:reportId',
+            lazy: screen(() => import('../condition/ConditionReportPage'), (m) => m.TenantConditionPage),
+          },
         ],
       },
       { path: '*', element: <NotFound /> },

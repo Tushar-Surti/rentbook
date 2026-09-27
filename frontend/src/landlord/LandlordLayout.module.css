@@ -55,6 +55,40 @@
   }
 }
 
+/* Phones: brand and sign out share the first line; the book's other pages get a line of their own below. */
+@media (max-width: 39.99rem) {
+  .topbar {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    column-gap: var(--space-5);
+    row-gap: 0;
+    padding-bottom: var(--space-1);
+  }
+
+  .topbar::after {
+    content: '';
+    flex-basis: 100%;
+    order: 2;
+  }
+
+  .home {
+    margin-right: auto;
+  }
+
+  .who {
+    display: contents;
+  }
+
+  .who > button {
+    order: 1;
+  }
+
+  .topLink {
+    order: 3;
+    font-size: var(--text-sm);
+  }
+}
+
 .latest {
   max-width: none;
   padding: 0 var(--space-4);

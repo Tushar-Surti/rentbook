@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -51,6 +53,29 @@ class LedgerController {
                                   @Valid @RequestBody AddChargeRequest body) {
         return ledger.addCharge(CurrentUser.id(jwt), id, body.kind(), body.description(), body.amountPaise(),
                 body.dueOn());
+    }
+
+    record AddonRequest(@NotNull Charge.Kind kind, @NotBlank @Size(max = 80) String label,
+                        @NotNull @Positive Long amountPaise, @NotNull YearMonth startsMonth) {
+    }
+
+    @GetMapping("/leases/{id}/addons")
+    List<LedgerService.Addon> addons(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return ledger.addons(id, CurrentUser.id(jwt), CurrentUser.isLandlord(jwt) ? Role.LANDLORD : Role.TENANT);
+    }
+
+    @PostMapping("/leases/{id}/addons")
+    @PreAuthorize("hasRole('LANDLORD')")
+    @ResponseStatus(HttpStatus.CREATED)
+    LedgerService.Addon addAddon(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                                 @Valid @RequestBody AddonRequest body) {
+        return ledger.addAddon(CurrentUser.id(jwt), id, body.kind(), body.label(), body.amountPaise(), body.startsMonth());
+    }
+
+    @PostMapping("/addons/{id}/stop")
+    @PreAuthorize("hasRole('LANDLORD')")
+    LedgerService.Addon stopAddon(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return ledger.stopAddon(CurrentUser.id(jwt), id);
     }
 
     @PostMapping("/charges/{id}/waive")

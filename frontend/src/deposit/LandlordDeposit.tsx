@@ -1,11 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { api, ApiError } from '../api/client'
 import type { DepositView, LeaseView } from '../api/types'
 import { SessionLoading } from '../app/guards'
 import { Button } from '../design/Button'
 import { FormError, SelectField, TextAreaField, TextField } from '../design/Field'
 import { rupees, todayIso, toPaise } from '../lib/format'
+import { conditionLabel, conditionReportQuery, conditionReportsQuery } from '../condition/queries'
 import styles from './Deposit.module.css'
 import { DepositStatement } from './DepositStatement'
 
@@ -73,6 +75,19 @@ export function LandlordDeposit({ lease }: { lease: LeaseView }) {
 
 type Line = { key: number; description: string; amount: string }
 
+/** What the sent move-out report found worse than at move-in: the grounds for a deduction. */
+function useMoveOutFindings(lease: LeaseView) {
+  const reports = useQuery(conditionReportsQuery(lease.id))
+  const moveOut = reports.data?.find((report) => report.kind === 'MOVE_OUT' && report.status !== 'DRAFT')
+  const report = useQuery({ ...conditionReportQuery(moveOut?.id ?? ''), enabled: Boolean(moveOut) })
+  if (!report.data) return null
+  return {
+    worse: report.data.lines.filter((line) => line.worse),
+    confirmed: report.data.status === 'CONFIRMED',
+    link: `/l/p/${lease.property.id}/leases/${lease.id}/condition/${report.data.id}`,
+  }
+}
+
 function ProposeForm({ lease, view, onDone }: { lease: LeaseView; view: DepositView; onDone: () => void }) {
   const queryClient = useQueryClient()
   const first = lease.tenant.fullName.split(' ')[0]
@@ -88,6 +103,7 @@ function ProposeForm({ lease, view, onDone }: { lease: LeaseView; view: DepositV
   const [note, setNote] = useState(previous?.landlordNote ?? '')
   const [busy, setBusy] = useState(false)
   const [formError, setFormError] = useState<string>()
+  const findings = useMoveOutFindings(lease)
 
   const fromBook = view.openCharges.filter((charge) => charges.has(charge.id))
   const deducted =
@@ -156,6 +172,42 @@ function ProposeForm({ lease, view, onDone }: { lease: LeaseView; view: DepositV
               <span className="entry num">{rupees(charge.amountPaise)}</span>
             </label>
           ))}
+        </fieldset>
+      )}
+
+      {findings && findings.worse.length > 0 && (
+        <fieldset className={styles.fieldset}>
+          <legend className={styles.legend}>Worse than at move-in</legend>
+          <p className={styles.hint}>
+            From the <Link to={findings.link}>move-out report</Link>
+            {findings.confirmed ? `, which ${first} confirmed` : `, still waiting for ${first} to confirm it`}.
+          </p>
+          {findings.worse.map((line) => {
+            const description = `${line.item} (${line.area}), ${conditionLabel(line.condition).toLowerCase()}`
+            const taken = lines.some((existing) => existing.description === description)
+            return (
+              <div key={line.id} className={styles.finding}>
+                <span>
+                  <span className={styles.findingWhat}>
+                    {line.area}: {line.item}
+                  </span>{' '}
+                  {conditionLabel(line.atMoveIn!).toLowerCase()} at move-in, now{' '}
+                  <span className="entry">{conditionLabel(line.condition).toLowerCase()}</span>
+                  {line.note && <span className="entry">. {line.note}</span>}
+                </span>
+                {taken ? (
+                  <span className={styles.hint}>Added below</span>
+                ) : (
+                  <Button
+                    variant="quiet"
+                    onClick={() => setLines((current) => [...current, { key: Date.now(), description, amount: '' }])}
+                  >
+                    Deduct for this
+                  </Button>
+                )}
+              </div>
+            )
+          })}
         </fieldset>
       )}
 

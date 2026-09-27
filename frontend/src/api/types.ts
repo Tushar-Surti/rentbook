@@ -85,6 +85,10 @@ export type InvitePreview = {
   endsOn: string | null
   expiresAt: string
   existingAccount: boolean
+  /** A share of a flat someone already lives in. */
+  flatmate: boolean
+  /** Who already lives there, for a flatmate invite. */
+  sharedWith: string[]
 }
 
 export type LeaseStatus = 'ACTIVE' | 'NOTICE' | 'ENDED'
@@ -129,6 +133,16 @@ export type Ledger = { leaseId: string; outstandingPaise: number; overduePaise: 
 
 export type MonthRent = { status: EntryStatus; amountPaise: number; dueOn: string }
 
+export type Occupant = {
+  leaseId: string
+  tenantId: string
+  tenantName: string
+  rentPaise: number
+  dueDay: number
+  thisMonth: MonthRent | null
+  outstandingPaise: number
+}
+
 export type Hook = {
   unitId: string
   kind: UnitKind
@@ -136,18 +150,12 @@ export type Hook = {
   roomId: string | null
   roomLabel: string | null
   status: UnitStatus
-  occupant: {
-    leaseId: string
-    tenantId: string
-    tenantName: string
-    rentPaise: number
-    dueDay: number
-    thisMonth: MonthRent | null
-    outstandingPaise: number
-  } | null
+  /** The first tenant in; anyone sharing the flat with them is in flatmates. */
+  occupant: Occupant | null
   invite: { inviteId: string; tenantName: string; expiresAt: string } | null
   /** Set while the vacant unit is listed publicly. */
   listingId: string | null
+  flatmates: Occupant[]
 }
 
 export type PropertyBoard = { id: string; name: string; kind: PropertyKind; city: string; hooks: Hook[] }
@@ -227,6 +235,8 @@ export type TenantHome = {
   deposit: DepositView | null
   /** With no live lease: the lease the deposit belongs to. */
   movedOutOf: LeaseView | null
+  /** Others with their own lease on the same flat: their share and this month's status. */
+  flatmates: { name: string; rentPaise: number; thisMonth: MonthRent | null }[]
 }
 
 export type PendingPayment = { id: string; amountPaise: number }
@@ -468,3 +478,57 @@ export type PublicListing = {
 }
 
 export type PhotoUploadTicket = { photoId: string; url: string; headers: Record<string, string>; expiresAt: string }
+
+export type Addon = {
+  id: string
+  kind: ChargeKind
+  label: string
+  amountPaise: number
+  /** First month billed, as "2026-10-01". */
+  startsMonth: string
+  endsMonth: string | null
+  running: boolean
+}
+
+export type ConditionKind = 'MOVE_IN' | 'MOVE_OUT'
+export type ConditionReportStatus = 'DRAFT' | 'SENT' | 'CONFIRMED'
+export type Condition = 'GOOD' | 'WORN' | 'DAMAGED' | 'MISSING'
+
+/** A report in a lease's list; {@code worse} counts move-out lines worse than at move-in. */
+export type ConditionSummary = {
+  id: string
+  kind: ConditionKind
+  status: ConditionReportStatus
+  sentAt: string | null
+  confirmedAt: string | null
+  lines: number
+  worse: number
+}
+
+export type ConditionPhoto = { id: string; filename: string; url: string; byTenant: boolean; mine: boolean }
+
+export type ConditionLine = {
+  id: string
+  area: string
+  item: string
+  condition: Condition
+  note: string | null
+  tenantNote: string | null
+  photos: ConditionPhoto[]
+  /** On a move-out report: the same line's condition at move-in, when it was on that report. */
+  atMoveIn: Condition | null
+  worse: boolean
+}
+
+export type ConditionReport = {
+  id: string
+  kind: ConditionKind
+  status: ConditionReportStatus
+  createdAt: string
+  sentAt: string | null
+  confirmedAt: string | null
+  lease: LeaseView
+  comparedWithMoveIn: boolean
+  worse: number
+  lines: ConditionLine[]
+}

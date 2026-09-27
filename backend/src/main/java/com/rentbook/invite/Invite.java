@@ -70,6 +70,10 @@ public class Invite extends BaseEntity {
     protected Invite() {
     }
 
+    /** Joins a flat someone already lives in, for their own share of the rent. */
+    @Column(nullable = false)
+    private boolean flatmate;
+
     Invite(UUID landlordId, UUID unitId, String tenantName, String email, String phone, long rentPaise,
            long depositPaise, int dueDay, LocalDate startsOn, LocalDate endsOn, String tokenHash, Instant expiresAt) {
         this.landlordId = landlordId;
@@ -116,6 +120,14 @@ public class Invite extends BaseEntity {
 
     public UUID getLandlordId() {
         return landlordId;
+    }
+
+    void markFlatmate() {
+        this.flatmate = true;
+    }
+
+    public boolean isFlatmate() {
+        return flatmate;
     }
 
     public UUID getUnitId() {

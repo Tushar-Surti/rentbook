@@ -64,7 +64,8 @@ class InviteController {
             @NotNull @PositiveOrZero Long depositPaise,
             @NotNull @Min(1) @Max(28) Integer dueDay,
             @NotNull LocalDate startsOn,
-            LocalDate endsOn) {
+            LocalDate endsOn,
+            Boolean flatmate) {
     }
 
     record AcceptInviteRequest(
@@ -89,7 +90,7 @@ class InviteController {
                                 @Valid @RequestBody CreateInviteRequest body) {
         InviteService.Issued issued = service.create(CurrentUser.id(jwt), unitId, new InviteService.Terms(
                 body.tenantName(), body.email(), body.phone(), body.rentPaise(), body.depositPaise(), body.dueDay(),
-                body.startsOn(), body.endsOn()));
+                body.startsOn(), body.endsOn(), Boolean.TRUE.equals(body.flatmate())));
         return new IssuedInviteResponse(view(issued.invite()), issued.link());
     }
 

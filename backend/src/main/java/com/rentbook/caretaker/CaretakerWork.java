@@ -59,7 +59,8 @@ public class CaretakerWork {
                 (int) hooks.stream().filter(hook -> hook.occupant() != null).count(),
                 (int) hooks.stream().filter(hook -> hook.occupant() == null && hook.invite() == null).count(),
                 (int) hooks.stream().filter(hook -> hook.invite() != null).count(),
-                hooks.stream().filter(hook -> hook.occupant() != null).mapToLong(hook -> hook.occupant().rentPaise()).sum());
+                hooks.stream().filter(hook -> hook.occupant() != null).mapToLong(hook -> hook.occupant().rentPaise()
+                        + hook.flatmates().stream().mapToLong(DashboardService.Occupant::rentPaise).sum()).sum());
         return new Board(context.fullName(), context.landlordName(), all.month(), totals, mine);
     }
 

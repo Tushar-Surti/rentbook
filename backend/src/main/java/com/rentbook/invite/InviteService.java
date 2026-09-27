@@ -63,8 +63,9 @@ public class InviteService {
         this.clock = clock;
     }
 
+    /** {@code flatmate}: joining a flat someone else shares, for this person's own share of the rent. */
     public record Terms(String tenantName, String email, String phone, long rentPaise, long depositPaise, int dueDay,
-                        LocalDate startsOn, LocalDate endsOn) {
+                        LocalDate startsOn, LocalDate endsOn, boolean flatmate) {
     }
 
     /** Published inside the transaction; listeners act after commit. The raw token travels only here. */
@@ -80,21 +81,22 @@ public class InviteService {
     public record Preview(String tenantName, String email, String landlordName, String propertyName, String city,
                           Unit.Kind unitKind, String unitLabel, String roomLabel, long rentPaise, long depositPaise,
                           int dueDay, LocalDate startsOn, LocalDate endsOn, Instant expiresAt,
-                          boolean existingAccount) {
+                          boolean existingAccount, boolean flatmate, List<String> sharedWith) {
     }
 
     @Transactional
     public Issued create(UUID landlordId, UUID unitId, Terms terms) {
-        Unit unit = propertyService.leasableUnit(landlordId, unitId);
+        Unit unit = terms.flatmate() ? shareableUnit(landlordId, unitId) : propertyService.leasableUnit(landlordId, unitId);
         Instant now = clock.instant();
-        invites.findByUnitIdAndStatus(unit.getId(), Invite.Status.PENDING).ifPresent(existing -> {
-            if (existing.isOpen(now)) {
+        for (Invite existing : invites.findByUnitIdAndStatus(unit.getId(), Invite.Status.PENDING)) {
+            if (!existing.isOpen(now)) {
+                existing.expire();
+            } else if (!terms.flatmate() && !existing.isFlatmate()) {
                 throw ApiException.conflict("invite_pending",
                         "This unit already has an open invite. Resend or revoke it first.");
             }
-            existing.expire();
-            invites.flush();
-        });
+        }
+        invites.flush();
         if (terms.endsOn() != null && !terms.endsOn().isAfter(terms.startsOn())) {
             throw ApiException.badRequest("end_before_start", "The lease must end after it starts.");
         }
@@ -103,10 +105,25 @@ public class InviteService {
             throw ApiException.conflict("email_is_landlord", "This email belongs to a landlord account.");
         });
         String token = SecureTokens.generate();
-        Invite invite = invites.save(new Invite(landlordId, unit.getId(), terms.tenantName(), email, terms.phone(),
+        Invite invite = new Invite(landlordId, unit.getId(), terms.tenantName(), email, terms.phone(),
                 terms.rentPaise(), terms.depositPaise(), terms.dueDay(), terms.startsOn(), terms.endsOn(),
-                SecureTokens.sha256Hex(token), now.plus(rentbook.invites().ttl())));
-        return announce(invite, token);
+                SecureTokens.sha256Hex(token), now.plus(rentbook.invites().ttl()));
+        if (terms.flatmate()) {
+            invite.markFlatmate();
+        }
+        return announce(invites.save(invite), token);
+    }
+
+    /** A flat, or a room let whole, that someone may share; beds are always one person each. */
+    private Unit shareableUnit(UUID landlordId, UUID unitId) {
+        Unit unit = propertyService.ownedUnit(landlordId, unitId);
+        if (unit.getKind() == Unit.Kind.BED || (unit.getKind() == Unit.Kind.ROOM && units.existsByParentUnitId(unit.getId()))) {
+            throw ApiException.badRequest("not_shareable", "A bed is let to one person. Flatmates share a flat or a room let whole.");
+        }
+        if (unit.getStatus() == Unit.Status.INACTIVE) {
+            throw ApiException.conflict("unit_inactive", "This unit isn't in use.");
+        }
+        return unit;
     }
 
     @Transactional
@@ -144,10 +161,14 @@ public class InviteService {
         Unit room = unit.getParentUnitId() == null ? null : units.findById(unit.getParentUnitId()).orElse(null);
         Property property = properties.findById(unit.getPropertyId()).orElseThrow(() -> ApiException.notFound("Invite"));
         String landlordName = users.findById(invite.getLandlordId()).map(User::getFullName).orElse("");
+        List<String> sharedWith = leases.findByUnitIdAndStatusInOrderByStartsOnAscCreatedAtAsc(unit.getId(),
+                        List.of(Lease.Status.ACTIVE, Lease.Status.NOTICE)).stream()
+                .map(lease -> users.findById(lease.getTenantId()).map(User::getFullName).orElse("A flatmate")).toList();
         return new Preview(invite.getTenantName(), invite.getEmail(), landlordName, property.getName(),
                 property.getCity(), unit.getKind(), unit.getLabel(), room == null ? null : room.getLabel(),
                 invite.getRentPaise(), invite.getDepositPaise(), invite.getDueDay(), invite.getStartsOn(),
-                invite.getEndsOn(), invite.getExpiresAt(), users.existsByEmail(invite.getEmail()));
+                invite.getEndsOn(), invite.getExpiresAt(), users.existsByEmail(invite.getEmail()),
+                invite.isFlatmate(), sharedWith);
     }
 
     /**
@@ -160,7 +181,7 @@ public class InviteService {
                 .orElseThrow(() -> ApiException.notFound("Invite"));
         requireOpen(invite);
         Unit unit = units.findById(invite.getUnitId()).orElseThrow(() -> ApiException.notFound("Invite"));
-        if (unit.getStatus() != Unit.Status.VACANT) {
+        if (unit.getStatus() != Unit.Status.VACANT && !invite.isFlatmate()) {
             throw ApiException.conflict("unit_not_vacant", "This unit is no longer available. Ask your landlord.");
         }
         User tenant = users.findByEmail(invite.getEmail())

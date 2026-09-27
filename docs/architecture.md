@@ -42,7 +42,7 @@ Conventions:
 
 ## Data model
 
-Flyway owns the schema. `V1__core.sql` covers identity, portfolio, invites, and leases. `V2__ledger_notifications.sql` adds charges and the notification log. `V3__payments.sql` adds payout accounts, payments with the charges they cover, receipts, and the webhook log. `V4__maintenance_documents.sql` adds maintenance requests, their append-only thread, and the documents table, which holds maintenance photos now and the vault's files next.
+Flyway owns the schema. `V1__core.sql` covers identity, portfolio, invites, and leases. `V2__ledger_notifications.sql` adds charges and the notification log. `V3__payments.sql` adds payout accounts, payments with the charges they cover, receipts, and the webhook log. `V4__maintenance_documents.sql` adds maintenance requests, their append-only thread, and the documents table, which holds maintenance photos now and the vault's files next. Later migrations add signup and password reset codes, recorded payments, a lease's last day, deposit settlements, caretakers and listings (V5 to V11); `V12__recurring_charges.sql` adds monthly add-ons, `V13__flatmates.sql` lets flatmates each hold a lease on one flat, and `V14__condition_reports.sql` adds move-in and move-out condition reports.
 
 ```mermaid
 erDiagram
@@ -64,6 +64,11 @@ erDiagram
   leases ||--o{ tickets : "raises"
   tickets ||--o{ ticket_events : "thread"
   leases ||--o{ documents : "vault"
+  leases ||--o{ recurring_charges : "add-ons"
+  recurring_charges ||--o{ charges : "billed monthly as"
+  leases ||--o{ condition_reports : "move-in and move-out"
+  condition_reports ||--|{ condition_items : "lines"
+  condition_items ||--o{ documents : "photos"
   users ||--o{ notifications : "receives"
 ```
 
@@ -74,9 +79,12 @@ erDiagram
 | `refresh_tokens` | user_id, token_hash, family_id, expires_at, revoked_at, replaced_by_id | unique token_hash |
 | `properties` | landlord_id, name, kind PG, APARTMENT or HOUSE, address, city, pincode | |
 | `units` | property_id, parent_unit_id, kind FLAT, ROOM or BED, label, default rent and deposit, status | beds must sit inside a room of the same property |
-| `invites` | landlord_id, unit_id, tenant name, email, phone, token_hash, rent, deposit, due_day, dates, status, expires_at | one PENDING invite per unit |
-| `leases` | unit_id, landlord_id, tenant_id, invite_id, rent, deposit, due_day 1 to 28, dates, status | one ACTIVE lease per unit |
-| `charges` | lease_id, kind RENT, DEPOSIT, UTILITY or OTHER, period_month, amount, due_on, status | one RENT charge per lease per month |
+| `invites` | landlord_id, unit_id, tenant name, email, phone, token_hash, rent, deposit, due_day, dates, status, expires_at, flatmate | one open ordinary invite per unit; flatmate invites go to an occupied flat or whole room, never a bed |
+| `leases` | unit_id, landlord_id, tenant_id, invite_id, rent, deposit, due_day 1 to 28, dates, status | one live lease per tenant per unit; flatmates each hold their own lease for their share, and the unit is vacant again only when the last one ends |
+| `charges` | lease_id, kind RENT, DEPOSIT, UTILITY or OTHER, period_month, amount, due_on, status, recurring_id, recurring_month | one RENT charge per lease per month; one charge per add-on per month |
+| `recurring_charges` | lease_id, kind UTILITY or OTHER, label, amount, starts_month, ends_month | billed with each month's rent, due the same day, until stopped |
+| `condition_reports` | lease_id, kind MOVE_IN or MOVE_OUT, status DRAFT, SENT or CONFIRMED, sent_at, confirmed_at | one of each kind per lease; unchangeable once sent |
+| `condition_items` | report_id, position, area, item, condition GOOD, WORN, DAMAGED or MISSING, note, tenant_note | a move-out line is compared with the move-in line of the same area and item |
 | `payments` | lease, tenant, landlord, amount, platform fee, landlord share, Razorpay order, payment and transfer ids, status | unique Razorpay ids |
 | `payment_charges` | payment_id, charge_id | composite key |
 | `payout_accounts` | landlord_id, Razorpay account, stakeholder and product ids, activation_status, bank details (last 4 only) | one per landlord |
@@ -84,7 +92,7 @@ erDiagram
 | `webhook_events` | event_id (`x-razorpay-event-id`), type, payload (jsonb), status, error | unique event_id |
 | `tickets` | lease, unit, landlord, tenant, title, category, priority, status | |
 | `ticket_events` | ticket_id, author_id, kind MESSAGE or STATUS_CHANGE, body, from and to status | append-only |
-| `documents` | landlord, lease, ticket event, uploader, type, visibility, storage key, content type, size, status | |
+| `documents` | landlord, lease, ticket event, condition item, uploader, type, visibility, storage key, content type, size, status | photos on a thread message or a report line stay off the vault shelf |
 | `notifications` | user, channel, template, dedupe_key, status, provider id | unique dedupe_key |
 
 Vault visibility: lease agreements, receipts, and maintenance photos are visible to both parties of the lease. KYC is visible to the uploading tenant and that lease's landlord only. For other documents the uploader picks landlord-only or both parties.
@@ -97,10 +105,12 @@ Base path `/api/v1`. Errors are `application/problem+json`. Lists are paged (`pa
 |---|---|---|
 | Auth | `POST /auth/register/code`, `POST /auth/register`, `POST /auth/login`, `POST /auth/password/code`, `POST /auth/password/reset`, `POST /auth/refresh`, `POST /auth/logout`, `GET /me` | register is for landlords only, with the code emailed by register/code; password/code answers 204 whether or not the account exists |
 | Invites by token | `GET /invites/{token}`, `POST /invites/{token}/accept` | public, token-gated; accepting creates the TENANT user and the lease |
-| Invites | `POST /units/{id}/invites`, `GET /invites`, `POST /invites/{id}/resend`, `POST /invites/{id}/revoke` | landlord |
+| Invites | `POST /units/{id}/invites` (with `flatmate: true` to add a flatmate), `GET /invites`, `POST /invites/{id}/resend`, `POST /invites/{id}/revoke` | landlord |
 | Portfolio | `GET, POST /properties`, `GET, PATCH /properties/{id}`, `GET, POST /properties/{id}/units`, `PATCH /units/{id}` | landlord |
 | Leases | `GET /leases`, `GET /leases/{id}`, `POST /leases/{id}/end` | landlord; tenant reads their own |
 | Ledger | `GET /leases/{id}/ledger`, `POST /leases/{id}/charges`, `POST /charges/{id}/waive` | both read; landlord writes |
+| Add-ons | `GET, POST /leases/{id}/addons`, `POST /addons/{id}/stop` | both read; landlord sets up and stops; each month's line is an ordinary charge |
+| Condition reports | `GET, POST /leases/{id}/condition-reports`, `GET, DELETE /condition-reports/{id}`, `POST /condition-reports/{id}/lines`, `/send`, `/confirm`, `PATCH, DELETE /condition-lines/{id}`, `POST /condition-lines/{id}/photos`, `DELETE /condition-photos/{id}` | the landlord writes a draft and sends it; the tenant never sees a draft, adds notes and photos while it's sent, and confirms it |
 | Payments | `POST /payments/checkout`, `POST /payments/{id}/client-callback`, `GET /payments/{id}` | tenant |
 | Payouts | `GET /payouts/account`, `POST /payouts/account` | landlord |
 | Webhook | `POST /webhooks/razorpay` | Razorpay, HMAC-verified |
@@ -120,7 +130,7 @@ STOMP over a native WebSocket at `/ws` (no SockJS). The client sends `Authorizat
 
 | Destination | Carries | Who may subscribe |
 |---|---|---|
-| `/topic/leases/{id}` | charge added, payment confirmed | the lease's landlord and tenant |
+| `/topic/leases/{id}` | charge added, payment confirmed, deposit settlement changed, condition report sent or confirmed | the lease's landlord and tenant (and its caretaker) |
 | `/topic/tickets/{id}` | new message, status change | the ticket's landlord and tenant |
 | `/user/queue/events` | personal notices: invite accepted, payment confirmed (to the landlord, with the tenant's name), payment failed (to the tenant), new ticket | the user |
 

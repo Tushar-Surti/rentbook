@@ -104,7 +104,7 @@ public class LeaseService {
         }
         lease.end(endsOn, IndiaTime.today(clock));
         if (lease.getStatus() == Lease.Status.ENDED) {
-            units.findById(lease.getUnitId()).ifPresent(Unit::markVacant);
+            vacateIfEmpty(lease);
         }
         LeaseView view = views(List.of(lease)).getFirst();
         events.publishEvent(new LeaseEndSet(view));
@@ -117,9 +117,27 @@ public class LeaseService {
         List<Lease> due = leases.findByStatusAndEndsOnLessThanEqual(Lease.Status.NOTICE, today);
         for (Lease lease : due) {
             lease.end(lease.getEndsOn(), today);
-            units.findById(lease.getUnitId()).ifPresent(Unit::markVacant);
+            vacateIfEmpty(lease);
         }
         return due.size();
+    }
+
+    /** Flatmates: the unit is vacant only once nobody lives there any more. */
+    private void vacateIfEmpty(Lease ended) {
+        leases.flush();
+        boolean stillLived = !leases.findByUnitIdAndStatusInOrderByStartsOnAscCreatedAtAsc(ended.getUnitId(),
+                List.of(Lease.Status.ACTIVE, Lease.Status.NOTICE)).isEmpty();
+        if (!stillLived) {
+            units.findById(ended.getUnitId()).ifPresent(Unit::markVacant);
+        }
+    }
+
+    /** The other people living on this lease's unit: its flatmates, oldest tenancy first. */
+    @Transactional(readOnly = true)
+    public List<Lease> flatmatesOf(Lease lease) {
+        return leases.findByUnitIdAndStatusInOrderByStartsOnAscCreatedAtAsc(lease.getUnitId(),
+                        List.of(Lease.Status.ACTIVE, Lease.Status.NOTICE)).stream()
+                .filter(other -> !other.getId().equals(lease.getId())).toList();
     }
 
     private List<LeaseView> views(List<Lease> found) {

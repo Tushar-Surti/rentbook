@@ -15,8 +15,15 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
     List<Document> findByTicketEventIdInAndStatusOrderByCreatedAtAsc(Collection<UUID> ticketEventIds,
                                                                      Document.Status status);
 
-    List<Document> findByLeaseIdAndStatusAndTypeNotOrderByCreatedAtDesc(UUID leaseId, Document.Status status,
-                                                                         Document.Type type);
+    List<Document> findByLeaseIdAndStatusAndTypeNotInOrderByCreatedAtDesc(UUID leaseId, Document.Status status,
+                                                                           Collection<Document.Type> types);
+
+    List<Document> findByConditionItemIdInAndStatusOrderByCreatedAtAsc(Collection<UUID> conditionItemIds,
+                                                                      Document.Status status);
+
+    List<Document> findByConditionItemIdIn(Collection<UUID> conditionItemIds);
+
+    long countByConditionItemId(UUID conditionItemId);
 
     List<Document> findByStatusAndCreatedAtBefore(Document.Status status, Instant cutoff);
 }

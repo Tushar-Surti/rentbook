@@ -20,6 +20,10 @@ public interface LeaseRepository extends JpaRepository<Lease, UUID> {
 
     boolean existsByIdAndLandlordId(UUID id, UUID landlordId);
 
+    /** Flatmates: the leases living on one unit. */
+    java.util.List<Lease> findByUnitIdAndStatusInOrderByStartsOnAscCreatedAtAsc(UUID unitId,
+                                                                            java.util.Collection<Lease.Status> statuses);
+
     boolean existsByIdAndTenantId(UUID id, UUID tenantId);
 
     List<Lease> findByStatusIn(Collection<Lease.Status> statuses);

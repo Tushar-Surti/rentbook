@@ -39,6 +39,9 @@ const SERVER_FIELDS: Record<string, keyof Values> = { rentPaise: 'rent', deposit
 /** The landlord writes the terms on the original; the duplicate torn from it is what the tenant receives. */
 export function InvitePage() {
   const { unitId = '' } = useParams()
+  // "Add a flatmate" on an occupied flat: a second lease on the same flat, for this person's share.
+  const [params] = useSearchParams()
+  const flatmate = params.get('flatmate') === '1'
   // Held here, not in the form: once sent, the board refreshes and marks this unit as invited.
   const [issued, setIssued] = useState<IssuedInvite>()
   const board = useQuery(boardQuery)
@@ -73,15 +76,19 @@ export function InvitePage() {
     )
   }
 
-  if (found.hook.occupant || found.hook.invite) {
+  const living = found.hook.occupant ? [found.hook.occupant, ...found.hook.flatmates] : []
+  const refusal = found.hook.invite
+    ? `${found.hook.invite.tenantName} already has an invite waiting.`
+    : flatmate && found.hook.kind === 'BED'
+      ? 'A bed is let to one person, so it cannot be shared.'
+      : !flatmate && found.hook.occupant
+        ? `${found.hook.occupant.tenantName} lives here.`
+        : null
+  if (refusal) {
     return (
       <div className={styles.message}>
         <h1 className={styles.heading}>{unitName} isn't open for an invite</h1>
-        <p>
-          {found.hook.occupant
-            ? `${found.hook.occupant.tenantName} lives here.`
-            : `${found.hook.invite?.tenantName} already has an invite waiting.`}
-        </p>
+        <p>{refusal}</p>
         <Link to={back}>Back to {found.property.name}</Link>
       </div>
     )
@@ -93,18 +100,27 @@ export function InvitePage() {
       unitName={unitName}
       propertyName={found.property.name}
       back={back}
-      defaultRentPaise={property.data?.units.find((unit) => unit.id === unitId)?.defaultRentPaise ?? null}
+      defaultRentPaise={
+        flatmate
+          ? (found.hook.occupant?.rentPaise ?? null)
+          : (property.data?.units.find((unit) => unit.id === unitId)?.defaultRentPaise ?? null)
+      }
+      defaultDueDay={flatmate ? found.hook.occupant?.dueDay : undefined}
+      sharingWith={flatmate ? living.map((occupant) => occupant.tenantName) : null}
       onIssued={setIssued}
     />
   )
 }
 
-function InviteForm({ unitId, unitName, propertyName, back, defaultRentPaise, onIssued }: {
+function InviteForm({ unitId, unitName, propertyName, back, defaultRentPaise, defaultDueDay, sharingWith, onIssued }: {
   unitId: string
   unitName: string
   propertyName: string
   back: string
   defaultRentPaise: number | null
+  defaultDueDay?: number
+  /** Set for a flatmate's invite: who already lives in the flat. */
+  sharingWith: string[] | null
   onIssued: (issued: IssuedInvite) => void
 }) {
   const queryClient = useQueryClient()
@@ -119,7 +135,7 @@ function InviteForm({ unitId, unitName, propertyName, back, defaultRentPaise, on
       phone: (params.get('phone') ?? '').replace(/\D/g, '').slice(-10),
       rent: params.get('rent') ?? (defaultRentPaise ? String(defaultRentPaise / 100) : ''),
       deposit: params.get('deposit') ?? '',
-      dueDay: '5',
+      dueDay: String(defaultDueDay ?? 5),
       startsOn: todayIso(),
       endsOn: '',
     },
@@ -140,6 +156,7 @@ function InviteForm({ unitId, unitName, propertyName, back, defaultRentPaise, on
           dueDay: Number(values.dueDay),
           startsOn: values.startsOn,
           endsOn: values.endsOn || null,
+          flatmate: sharingWith !== null,
         },
       })
       onIssued(result)
@@ -163,11 +180,24 @@ function InviteForm({ unitId, unitName, propertyName, back, defaultRentPaise, on
   return (
     <div className={styles.layout}>
       <div className={styles.intro}>
-        <h1 className={styles.heading}>Invite a tenant to {unitName}</h1>
-        <p className={styles.lede}>
-          Write the terms on the original. The canary duplicate is what {tenant} receives, by email with a link to
-          accept.
-        </p>
+        {sharingWith ? (
+          <>
+            <h1 className={styles.heading}>Add a flatmate to {unitName}</h1>
+            <p className={styles.lede}>
+              {draft.tenantName?.trim() || 'Your new flatmate'} gets their own lease for their share of the
+              rent, alongside {listNames(sharingWith)}. Flatmates see each other's share and whether this month is paid,
+              and nothing else.
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 className={styles.heading}>Invite a tenant to {unitName}</h1>
+            <p className={styles.lede}>
+              Write the terms on the original. The canary duplicate is what {tenant} receives, by email with a link to
+              accept.
+            </p>
+          </>
+        )}
       </div>
 
       <div className={styles.spread}>
@@ -197,7 +227,7 @@ function InviteForm({ unitId, unitName, propertyName, back, defaultRentPaise, on
               {...register('phone')}
             />
             <div className={styles.pair}>
-              <TextField label="Rent a month" prefix="₹" inputMode="decimal" error={formState.errors.rent?.message} {...register('rent')} />
+              <TextField label={sharingWith ? 'Their share a month' : 'Rent a month'} prefix="₹" inputMode="decimal" error={formState.errors.rent?.message} {...register('rent')} />
               <TextField label="Deposit" prefix="₹" inputMode="decimal" error={formState.errors.deposit?.message} {...register('deposit')} />
             </div>
             <SelectField
@@ -235,8 +265,14 @@ function InviteForm({ unitId, unitName, propertyName, back, defaultRentPaise, on
                 {unitName}, {propertyName}
               </dd>
             </div>
+            {sharingWith && (
+              <div>
+                <dt>Sharing with</dt>
+                <dd className="entry">{listNames(sharingWith)}</dd>
+              </div>
+            )}
             <div>
-              <dt>Rent</dt>
+              <dt>{sharingWith ? 'Your share' : 'Rent'}</dt>
               <dd className="entry num">{rentPaise ? `${rupees(rentPaise)} a month` : ' '}</dd>
             </div>
             <div>
@@ -272,3 +308,6 @@ function InviteForm({ unitId, unitName, propertyName, back, defaultRentPaise, on
     </div>
   )
 }
+
+const listNames = (names: string[]) =>
+  names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
